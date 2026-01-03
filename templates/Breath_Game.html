@@ -109,6 +109,11 @@ button {
 <body>
 
 <h1>🌿 呼吸训练小游戏</h1>
+{% if current_user.is_authenticated %}
+<p>Welcome, {{ current_user.username }}! <a href="{{ url_for('logout') }}" style="color: #22c55e;"">登出</a></p>
+{% else %}
+<p><a href="{{ url_for('login') }}" style="color: #22c55e;">登录</a> | <a href="{{ url_for('register') }}" style="color:#22c55e;">注册</a></p>
+{% endif %}
 <p>输入你的 4-2-6-2（吸气-憋气-呼气-憋气）时间，开始训练：</p>
 
 <div class="settings">
@@ -119,6 +124,16 @@ button {
 </div>
 
 <button id="startBtn">开始训练</button>
+{% if current_user.is_authenticated %}
+<button id="saveBtn">保存默认设置</button>
+{% endif %}
+
+<form id="saveForm" method="POST" action="{{ url_for('save_settings') }}" style="display: none;">
+  <input name="inhale" id="inhaleForm">
+  <input name="hold1" id="hold1Form">
+  <input name="exhale" id="exhaleForm">
+  <input name="hold2" id="hold2Form">
+</form>
 
 <div class="circle" id="circle"></div>
 
@@ -174,11 +189,29 @@ const progressFill = document.getElementById("progressFill");
 
 let running = false;
 
+// Load settings if available
+{% if settings %}
+document.getElementById("inhale").value = {{ settings.inhale }};
+document.getElementById("hold1").value = {{ settings.hold1 }};
+document.getElementById("exhale").value = {{ settings.exhale }};
+document.getElementById("hold2").value = {{ settings.hold2 }};
+{% endif %}
+
 document.getElementById("startBtn").addEventListener("click", () => {
   if (running) return;
   running = true;
   startBreathingCycle();
 });
+
+{% if current_user.is_authenticated %}
+document.getElementById("saveBtn").addEventListener("click", () => {
+  document.getElementById("inhaleForm").value = document.getElementById("inhale").value;
+  document.getElementById("hold1Form").value = document.getElementById("hold1").value;
+  document.getElementById("exhaleForm").value = document.getElementById("exhale").value;
+  document.getElementById("hold2Form").value = document.getElementById("hold2").value;
+  document.getElementById("saveForm").submit();
+});
+{% endif %}
 
 function startBreathingCycle() {
   const inhale = parseFloat(document.getElementById("inhale").value);
