@@ -125,7 +125,7 @@ button {
 
 <button id="startBtn">开始训练</button>
 {% if current_user.is_authenticated %}
-<button id="saveBtn">保存默认设置</button>
+<button id="saveBtn">保存设置</button>
 {% endif %}
 
 <form id="saveForm" method="POST" action="{{ url_for('save_settings') }}" style="display: none;">
