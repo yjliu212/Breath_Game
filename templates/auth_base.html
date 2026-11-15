@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="{{ html_lang }}">
 <head>
+{% set meta_robots = 'noindex, follow' %}{# login / register: crawlable but not indexed #}
 {% include '_head.html' %}
 <title>{% block title %}{% endblock %} - {{ t('site.name') }}</title>
 <style>

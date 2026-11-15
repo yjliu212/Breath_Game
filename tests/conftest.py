@@ -21,11 +21,12 @@ import app as app_module  # noqa: E402
 _CREATED_APPS = []
 
 
-def make_app(db_path):
+def make_app(db_path, **config):
     flask_app = app_module.create_app({
         'TESTING': True,
         'WTF_CSRF_ENABLED': False,
         'SQLALCHEMY_DATABASE_URI': 'sqlite:///' + str(db_path),
+        **config,
     })
     _CREATED_APPS.append(flask_app)
     return flask_app

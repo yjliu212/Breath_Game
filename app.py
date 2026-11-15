@@ -1,5 +1,5 @@
 from flask import (Flask, render_template, request, redirect, url_for, flash,
-                   jsonify, send_from_directory, abort)
+                   jsonify, send_from_directory, abort, current_app)
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
@@ -9,7 +9,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import inspect, text, func
 from sqlalchemy.exc import OperationalError
 from datetime import datetime, date, timedelta, timezone
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, quote
+from xml.sax.saxutils import escape
 import math
 import os
 
@@ -240,13 +241,31 @@ def ensure_sqlite_dir(uri):
             os.makedirs(parent, exist_ok=True)
 
 
+DEFAULT_SITE_URL = 'https://www.breathgame.net'
+OG_IMAGES = {'zh': 'og-image-zh.png', 'en': 'og-image-en.png'}
+OG_IMAGE_SIZE = (1200, 630)
+# Public, indexable pages listed in /sitemap.xml (endpoint names). Language is
+# chosen per cookie / Accept-Language on the same URL, so there are no
+# per-language URLs and therefore no hreflang alternates.
+SITEMAP_ENDPOINTS = ('home',)
+
+
+def absolute_url(path):
+    """SITE_URL + a site-relative path (no query string)."""
+    return current_app.config['SITE_URL'] + quote(path, safe="/-._~!$&'()*+,;=:@%")
+
+
 def create_app(test_config=None):
     app = Flask(__name__)
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')
     app.config['SQLALCHEMY_DATABASE_URI'] = database_uri(app)
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # Canonical origin for og:url / canonical / sitemap. Never derived from the
+    # request's Host header, so a spoofed Host cannot end up in these URLs.
+    app.config['SITE_URL'] = os.environ.get('SITE_URL', DEFAULT_SITE_URL)
     if test_config:
         app.config.update(test_config)
+    app.config['SITE_URL'] = app.config['SITE_URL'].rstrip('/')
     ensure_sqlite_dir(app.config['SQLALCHEMY_DATABASE_URI'])
 
     db.init_app(app)
@@ -276,6 +295,16 @@ def safe_next(target):
 
 
 def register_routes(app):
+
+    @app.context_processor
+    def inject_seo():
+        lang = i18n.get_lang()
+        return {
+            'canonical_url': absolute_url(request.path),
+            'og_image_url': absolute_url(url_for('static', filename=OG_IMAGES[lang])),
+            'og_image_width': OG_IMAGE_SIZE[0],
+            'og_image_height': OG_IMAGE_SIZE[1],
+        }
 
     @app.route('/lang/<code>')
     def set_language(code):
@@ -426,6 +455,18 @@ def register_routes(app):
     def robots():
         return send_from_directory(app.static_folder, 'robots.txt', mimetype='text/plain',
                                    max_age=86400)
+
+    @app.route('/sitemap.xml')
+    def sitemap():
+        urls = ''.join(f'  <url><loc>{escape(absolute_url(url_for(ep)))}</loc></url>\n'
+                       for ep in SITEMAP_ENDPOINTS)
+        body = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+                '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+                f'{urls}</urlset>\n')
+        resp = app.response_class(body, mimetype='application/xml')
+        resp.cache_control.public = True
+        resp.cache_control.max_age = 86400
+        return resp
 
 
 # gunicorn imports `app:app`; creating it here also creates/migrates the DB tables.

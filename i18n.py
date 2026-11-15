@@ -38,6 +38,10 @@ MESSAGES = {
         'zh': '跟随圆圈节奏练习 4-7-8、方块呼吸等呼吸法，帮助放松减压。',
         'en': 'Follow the circle to practice 4-7-8, box breathing and more. Relax and de-stress.',
     },
+    'meta.og_image_alt': {
+        'zh': '呼吸训练小游戏：深色背景上的绿色呼吸圆圈，打开浏览器就能免费练习呼吸',
+        'en': 'Breath Game: a green breathing circle on a dark background — free guided breathing in your browser',
+    },
 
     # ------------------------------------------------------------ language switch
     'lang.switch_label': {'zh': '语言 / Language', 'en': 'Language / 语言'},
@@ -260,6 +264,7 @@ def init_app(app):
             'lang': lang,
             'html_lang': HTML_LANG[lang],
             'og_locale': OG_LOCALE[lang],
+            'og_locale_alternates': [OG_LOCALE[x] for x in LANGS if x != lang],
         }
 
     @app.after_request

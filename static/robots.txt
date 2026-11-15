@@ -2,3 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /logout
+Disallow: /save_settings
+Disallow: /lang/
+
+Sitemap: https://www.breathgame.net/sitemap.xml
