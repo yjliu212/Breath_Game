@@ -48,11 +48,20 @@ def test_no_status_line_or_total_progress(home_html):
 
 def test_practice_controls_and_options_kept(home_html):
     for html in home_html.values():
-        for el in ('id="circle"', 'id="guideText"', 'id="countText"', 'id="startBtn"',
+        for el in ('id="circle"', 'id="guideText"', 'id="startBtn"',
                    'id="pauseBtn"', 'id="stopBtn"', 'id="doneMsg"', 'id="soundOpt"',
                    'id="vibrateOpt"', 'name="pattern" value="478"', 'class="lang-switch"'):
             assert el in html, el
     assert '>准备<' in home_html['zh'] and '>Ready<' in home_html['en']
+
+
+def test_no_countdown_inside_circle(home_html):
+    for html in home_html.values():
+        assert 'id="countText"' not in html
+        assert 'class="count"' not in html
+        assert 'countText' not in html
+        # Phase label stays, centered in the circle.
+        assert 'id="guideText"' in html and 'class="phase"' in html
 
 
 def test_engine_loops_and_records_completed_cycles_on_stop(home_html):

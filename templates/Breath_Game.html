@@ -43,7 +43,6 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
   box-shadow: 0 0 40px rgba(34, 197, 94, 0.25);
 }
 .circle .phase { font-size: 24px; font-weight: 600; color: #f0fdf4; }
-.circle .count { font-size: 34px; font-variant-numeric: tabular-nums; color: #f0fdf4; min-height: 40px; }
 .progressBar { width: 100%; height: 10px; background: #334155; border-radius: 5px; margin: 10px auto; overflow: hidden; }
 .progressBarFill { height: 100%; width: 0%; background: #22c55e; }
 
@@ -130,7 +129,6 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
   <div class="stage">
     <div class="circle" id="circle">
       <div class="phase" id="guideText" aria-live="polite">{{ t('js.phase_ready') }}</div>
-      <div class="count" id="countText"></div>
     </div>
   </div>
   <div class="progressBar" title="{{ t('home.phase_progress') }}"><div class="progressBarFill" id="progressFill"></div></div>
@@ -213,7 +211,7 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
   const SMALL = 0.65, BIG = 1.25;
 
   const $ = (id) => document.getElementById(id);
-  const circle = $("circle"), guide = $("guideText"), countText = $("countText");
+  const circle = $("circle"), guide = $("guideText");
   const progressFill = $("progressFill");
   const startBtn = $("startBtn"), pauseBtn = $("pauseBtn"), stopBtn = $("stopBtn");
   const doneMsg = $("doneMsg"), formError = $("formError"), fieldset = $("settingsFieldset");
@@ -389,7 +387,6 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     const s = session.steps[session.idx];
     const p = t / s.time;
     setScale(s.from + (s.to - s.from) * ease(p));
-    countText.textContent = Math.ceil(s.time - t);
     progressFill.style.width = (p * 100).toFixed(1) + "%";
     rafId = requestAnimationFrame(tick);
   }
@@ -420,7 +417,6 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     setButtons();
     setScale(0.75);
     guide.textContent = MSG.phase_ready;
-    countText.textContent = "";
     progressFill.style.width = "0%";
     doneMsg.className = "done-msg";
     if (s.cycles < 1) { doneMsg.textContent = ""; return; }   // not even one full breath
