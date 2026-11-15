@@ -83,6 +83,7 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
 .form-error { color: #fecaca; min-height: 20px; margin: 8px 0 0; text-align: left; }
 .options { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
 .options label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; }
+.options label[hidden] { display: none; }
 .options input { width: 20px; height: 20px; }
 .hint { color: #94a3b8; font-size: 13px; }
 
@@ -288,7 +289,12 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
   }
   loadOpt(soundOpt, "breath.sound");
   loadOpt(vibrateOpt, "breath.vibrate");
-  if (!("vibrate" in navigator)) { vibrateOpt.disabled = true; vibrateOpt.parentElement.title = "此设备不支持振动"; }
+  // Hide (not just disable) the vibration option where the API is missing, e.g. iOS Safari.
+  // Only unchecks in memory; the stored preference is left untouched.
+  if (typeof navigator.vibrate !== "function") {
+    vibrateOpt.checked = false;
+    vibrateOpt.parentElement.hidden = true;
+  }
 
   let audioCtx = null;
   function ensureAudio() {
