@@ -80,7 +80,11 @@ def test_default_home_is_chinese(client):
 def test_english_home_has_no_leftover_chinese(client):
     html = client.get('/', headers=EN).get_data(as_text=True)
     assert html_lang(html) == 'en'
-    assert '<title>Breathing Practice</title>' in html
+    assert '<title>Breath Game</title>' in html
+    assert '<h1>🌿 Breath Game</h1>' in html
+    assert 'og:site_name" content="Breath Game"' in html
+    assert 'og:title" content="Breath Game"' in html
+    assert 'Breathing Practice' not in html                      # old brand name fully gone
     assert '▶ Start' in html and 'Relax 4-2-6-2' in html and 'Hold after inhale (sec)' in html
     assert 'og:locale" content="en_US"' in html
     assert 'How breathing practice works' in html
@@ -181,10 +185,10 @@ def test_switch_control_keeps_logged_in_session(client):
 @pytest.mark.parametrize('path,zh_words,en_words', [
     ('/login', ['<title>登录 - 呼吸训练小游戏</title>', '<h1>登录</h1>', '>用户名</label>', '>密码</label>',
                 'value="登录"', '还没有账号？<a', '← 返回首页'],
-     ['<title>Log in - Breathing Practice</title>', '<h1>Log in</h1>', '>Username</label>', '>Password</label>',
+     ['<title>Log in - Breath Game</title>', '<h1>Log in</h1>', '>Username</label>', '>Password</label>',
       'value="Log in"', "Don&#39;t have an account? <a", '← Back to home']),
     ('/register', ['<title>注册 - 呼吸训练小游戏</title>', '<h1>注册</h1>', 'value="注册"', '已有账号？<a'],
-     ['<title>Sign up - Breathing Practice</title>', '<h1>Sign up</h1>', 'value="Sign up"',
+     ['<title>Sign up - Breath Game</title>', '<h1>Sign up</h1>', 'value="Sign up"',
       'Already have an account? <a']),
 ])
 def test_auth_pages_in_both_languages(client, path, zh_words, en_words):

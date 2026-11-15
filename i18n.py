@@ -28,7 +28,7 @@ OG_LOCALE = {'zh': 'zh_CN', 'en': 'en_US'}
 
 MESSAGES = {
     # ------------------------------------------------------------ site / meta
-    'site.name': {'zh': '呼吸训练小游戏', 'en': 'Breathing Practice'},
+    'site.name': {'zh': '呼吸训练小游戏', 'en': 'Breath Game'},
     'meta.description': {
         'zh': '免费的在线呼吸训练小游戏：跟随圆圈节奏练习 4-7-8、方块呼吸等呼吸法，帮助放松减压，登录后可保存设置并记录练习。',
         'en': 'A free online breathing exercise: follow the circle to practice 4-7-8, box breathing and more. '
