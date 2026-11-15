@@ -39,7 +39,7 @@ def test_client_supplied_duration_is_ignored(auth_client):
 
 @pytest.mark.parametrize('override', [
     {'inhale': 0}, {'inhale': -1}, {'exhale': 31}, {'hold1': 'abc'}, {'hold2': None},
-    {'rounds': 0}, {'rounds': 51}, {'rounds': 1.5}, {'rounds': True},
+    {'rounds': 0}, {'rounds': None}, {'rounds': 7201}, {'rounds': 1.5}, {'rounds': True},
     {'pattern': '<script>'}, {'local_date': 'yesterday'}, {'local_date': '2020-01-01'},
     {'local_date': (TODAY + timedelta(days=5)).isoformat()},
 ])
@@ -47,6 +47,24 @@ def test_record_rejects_invalid_data(app, auth_client, override):
     resp = auth_client.post('/api/sessions', json=dict(GOOD, **override))
     assert resp.status_code == 400
     assert resp.get_json()['ok'] is False
+    with app.app_context():
+        assert app_module.PracticeSession.query.count() == 0
+
+
+def test_record_long_open_ended_session(app, auth_client):
+    # Practice loops until Stop, so more than the old 50-round limit is fine.
+    resp = auth_client.post('/api/sessions', json=dict(GOOD, rounds=120))
+    assert resp.status_code == 201, resp.get_json()
+    assert resp.get_json()['duration_seconds'] == 19 * 120
+    with app.app_context():
+        assert app_module.PracticeSession.query.one().rounds == 120
+
+
+def test_record_rejects_implausibly_long_session(app, auth_client):
+    # 19 s cycle * 800 cycles > 4 h
+    resp = auth_client.post('/api/sessions', json=dict(GOOD, rounds=800))
+    assert resp.status_code == 400
+    assert resp.get_json()['error'] == '单次练习时长超出上限。'
     with app.app_context():
         assert app_module.PracticeSession.query.count() == 0
 

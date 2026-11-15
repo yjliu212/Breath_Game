@@ -33,7 +33,13 @@ SETTING_FIELDS = {
     'exhale': ('field.exhale', 1.0, 30.0, 6.0),
     'hold2': ('field.hold2', 0.0, 30.0, 2.0),
 }
+# Rounds are no longer part of the practice UI (practice loops until Stop). The
+# user.rounds column and these limits remain for previously saved values and
+# for old cached pages that still post a rounds field to /save_settings.
 ROUNDS_MIN, ROUNDS_MAX, ROUNDS_DEFAULT = 1, 50, 5
+# /api/sessions: `rounds` is the number of completed breath cycles before Stop.
+SESSION_CYCLES_MAX = 7200          # 4 h at the shortest possible 2 s cycle
+MAX_SESSION_SECONDS = 4 * 3600
 PATTERNS = {'relax', '478', 'box', 'coherent', 'custom'}
 MAX_SESSIONS_PER_DAY = 200
 
@@ -59,7 +65,7 @@ def parse_setting(name, raw):
     return round(value, 1), None
 
 
-def parse_rounds(raw):
+def parse_rounds(raw, hi=ROUNDS_MAX):
     if raw is None or (isinstance(raw, str) and raw.strip() == ''):
         return None, t('err.rounds_empty')
     if isinstance(raw, bool):
@@ -70,8 +76,8 @@ def parse_rounds(raw):
         return None, t('err.rounds_int')
     if not math.isfinite(value) or value != int(value):
         return None, t('err.rounds_int')
-    if not ROUNDS_MIN <= value <= ROUNDS_MAX:
-        return None, t('err.rounds_range', lo=ROUNDS_MIN, hi=ROUNDS_MAX)
+    if not ROUNDS_MIN <= value <= hi:
+        return None, t('err.rounds_range', lo=ROUNDS_MIN, hi=hi)
     return int(value), None
 
 
@@ -322,12 +328,9 @@ def register_routes(app):
         stats = None
         if current_user.is_authenticated:
             settings = {name: safe_setting(name, getattr(current_user, name)) for name in SETTING_FIELDS}
-            settings['rounds'] = safe_rounds(current_user.rounds)
             stats = compute_stats(current_user.id)
         limits = {name: {'label': t(f[0]), 'min': f[1], 'max': f[2], 'default': f[3]}
                   for name, f in SETTING_FIELDS.items()}
-        limits['rounds'] = {'label': t('field.rounds'), 'min': ROUNDS_MIN, 'max': ROUNDS_MAX,
-                            'default': ROUNDS_DEFAULT}
         return render_template("Breath_Game.html", settings=settings, stats=stats, limits=limits,
                                js_messages=i18n.js_messages())
 
@@ -374,7 +377,7 @@ def register_routes(app):
             if err:
                 errors.append(err)
             values[name] = value
-        # rounds is optional for backwards compatibility with old clients
+        # The form no longer has rounds; still accept it from old cached pages.
         if request.form.get('rounds') is not None:
             values['rounds'], err = parse_rounds(request.form.get('rounds'))
             if err:
@@ -403,7 +406,8 @@ def register_routes(app):
             values[name], err = parse_setting(name, data.get(name))
             if err:
                 errors.append(err)
-        values['rounds'], err = parse_rounds(data.get('rounds'))
+        # rounds = completed breath cycles (practice loops until the user stops).
+        values['rounds'], err = parse_rounds(data.get('rounds'), hi=SESSION_CYCLES_MAX)
         if err:
             errors.append(err)
         pattern = data.get('pattern', 'custom')
@@ -423,6 +427,8 @@ def register_routes(app):
 
         cycle = sum(values[n] for n in SETTING_FIELDS)
         duration = round(cycle * values['rounds'], 1)
+        if duration > MAX_SESSION_SECONDS:
+            return jsonify(ok=False, error=t('err.session_too_long')), 400
 
         # Plausibility: a session cannot finish before the previous one could have.
         now = datetime.now(timezone.utc).replace(tzinfo=None)

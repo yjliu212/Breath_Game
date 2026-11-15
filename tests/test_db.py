@@ -120,7 +120,7 @@ def test_legacy_db_is_migrated_without_data_loss(tmp_path):
     assert login(client, 'olduser', 'oldpass123').status_code == 302
     html = client.get('/').get_data(as_text=True)
     assert '欢迎，olduser' in html
-    assert '"inhale": 5.0' in html and '"hold2": 1.5' in html and '"rounds": 5' in html
+    assert '"inhale": 5.0' in html and '"hold2": 1.5' in html
 
     today = datetime.now(timezone.utc).date().isoformat()
     resp = client.post('/api/sessions', json={

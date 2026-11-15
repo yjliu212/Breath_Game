@@ -44,11 +44,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
 }
 .circle .phase { font-size: 24px; font-weight: 600; color: #f0fdf4; }
 .circle .count { font-size: 34px; font-variant-numeric: tabular-nums; color: #f0fdf4; min-height: 40px; }
-.status-line { min-height: 24px; color: #cbd5e1; font-variant-numeric: tabular-nums; }
 .progressBar { width: 100%; height: 10px; background: #334155; border-radius: 5px; margin: 10px auto; overflow: hidden; }
-.progressBar.total { height: 6px; }
 .progressBarFill { height: 100%; width: 0%; background: #22c55e; }
-.progressBar.total .progressBarFill { background: #38bdf8; }
 
 .controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 6px 0; }
 button {
@@ -136,9 +133,7 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
       <div class="count" id="countText"></div>
     </div>
   </div>
-  <div class="status-line" id="statusLine">{{ t('js.status_initial') }}</div>
   <div class="progressBar" title="{{ t('home.phase_progress') }}"><div class="progressBarFill" id="progressFill"></div></div>
-  <div class="progressBar total" title="{{ t('home.total_progress') }}"><div class="progressBarFill" id="totalFill"></div></div>
   <div class="controls">
     <button type="button" id="startBtn">{{ t('js.btn_start') }}</button>
     <button type="button" id="pauseBtn" class="secondary" hidden>{{ t('js.btn_pause') }}</button>
@@ -158,13 +153,12 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     </div>
     <p class="preset-desc" id="presetDesc"></p>
     <div class="fields">
-      {% for name in ['inhale', 'hold1', 'exhale', 'hold2', 'rounds'] %}
+      {% for name in ['inhale', 'hold1', 'exhale', 'hold2'] %}
       {% set lim = limits[name] %}
-      <label>{{ lim.label }}{% if name != 'rounds' %}{{ t('field.seconds_suffix') }}{% endif %}
+      <label>{{ lim.label }}{{ t('field.seconds_suffix') }}
         <span class="input-wrap">
-          <input id="{{ name }}" name="{{ name }}" type="number"
-                 inputmode="{{ 'numeric' if name == 'rounds' else 'decimal' }}"
-                 min="{{ lim.min }}" max="{{ lim.max }}" step="{{ 1 if name == 'rounds' else 0.5 }}"
+          <input id="{{ name }}" name="{{ name }}" type="number" inputmode="decimal"
+                 min="{{ lim.min }}" max="{{ lim.max }}" step="0.5"
                  value="{{ lim.default }}" required>
         </span>
       </label>
@@ -220,7 +214,7 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
 
   const $ = (id) => document.getElementById(id);
   const circle = $("circle"), guide = $("guideText"), countText = $("countText");
-  const statusLine = $("statusLine"), progressFill = $("progressFill"), totalFill = $("totalFill");
+  const progressFill = $("progressFill");
   const startBtn = $("startBtn"), pauseBtn = $("pauseBtn"), stopBtn = $("stopBtn");
   const doneMsg = $("doneMsg"), formError = $("formError"), fieldset = $("settingsFieldset");
   const presetRadios = Array.from(document.querySelectorAll('input[name="pattern"]'));
@@ -251,20 +245,20 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
   FIELDS.forEach((f) => $(f).addEventListener("input", () => setPattern(detectPattern())));
 
   if (SAVED) {
-    FIELDS.concat(["rounds"]).forEach((f) => { $(f).value = SAVED[f]; });
+    FIELDS.forEach((f) => { $(f).value = SAVED[f]; });
   }
   setPattern(detectPattern());
 
   function clearErrors() {
     formError.textContent = "";
-    FIELDS.concat(["rounds"]).forEach((f) => $(f).removeAttribute("aria-invalid"));
+    FIELDS.forEach((f) => $(f).removeAttribute("aria-invalid"));
   }
 
   // Mirrors the server-side validation in app.py.
   function readSettings() {
     clearErrors();
     const values = {}, errors = [];
-    FIELDS.concat(["rounds"]).forEach((f) => {
+    FIELDS.forEach((f) => {
       const lim = LIMITS[f], raw = $(f).value.trim(), v = Number(raw);
       const vars = { label: lim.label, min: lim.min, max: lim.max };
       let err = null;
@@ -272,7 +266,6 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
       else if (!Number.isFinite(v)) err = fmtMsg(MSG.err_nan, vars);
       else if (v < 0) err = fmtMsg(MSG.err_negative, vars);
       else if (v < lim.min || v > lim.max) err = fmtMsg(MSG.err_range, vars);
-      else if (f === "rounds" && !Number.isInteger(v)) err = MSG.err_rounds_int;
       if (err) { errors.push(err); $(f).setAttribute("aria-invalid", "true"); }
       values[f] = v;
     });
@@ -329,10 +322,6 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
   let state = "idle";      // idle | running | paused
   let session = null, rafId = null;
 
-  function fmt(sec) {
-    sec = Math.max(0, Math.ceil(sec));
-    return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
-  }
   function ease(p) { return 0.5 - Math.cos(Math.PI * p) / 2; }
   function setScale(s) { circle.style.transform = "scale(" + s + ")"; }
 
@@ -357,11 +346,10 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     if (!v) { doneMsg.textContent = ""; return; }
     if (soundOpt.checked) ensureAudio();   // must be created inside a user gesture
     const steps = buildSteps(v);
-    const cycle = steps.reduce((a, s) => a + s.time, 0);
+    // Loops until Stop; `cycles` counts fully completed inhale-hold-exhale-hold cycles.
     session = {
-      values: v, pattern: currentPattern(), steps: steps, cycle: cycle,
-      total: cycle * v.rounds, round: 1, idx: 0,
-      phaseStart: performance.now(), pausedAt: 0, doneBefore: 0
+      values: v, pattern: currentPattern(), steps: steps, cycles: 0, idx: 0,
+      phaseStart: performance.now(), pausedAt: 0
     };
     doneMsg.textContent = ""; doneMsg.className = "done-msg";
     state = "running";
@@ -376,31 +364,33 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     cue(s.freq);
   }
 
-  function tick(now) {
-    if (state !== "running") return;
+  // Move through finished phases up to `now` (also catches up after a background tab).
+  // Returns the seconds elapsed in the current phase.
+  function advance(now, cueing) {
     let s = session.steps[session.idx];
     let t = (now - session.phaseStart) / 1000;
-    while (t >= s.time) {               // advance (also catches up after a background tab)
+    while (t >= s.time) {
       session.phaseStart += s.time * 1000;
-      session.doneBefore += s.time;
       t -= s.time;
       session.idx += 1;
       if (session.idx >= session.steps.length) {
         session.idx = 0;
-        session.round += 1;
-        if (session.round > session.values.rounds) { finish(); return; }
+        session.cycles += 1;
       }
       s = session.steps[session.idx];
-      enterPhase();
+      if (cueing) enterPhase();
     }
+    return t;
+  }
+
+  function tick(now) {
+    if (state !== "running") return;
+    const t = advance(now, true);
+    const s = session.steps[session.idx];
     const p = t / s.time;
     setScale(s.from + (s.to - s.from) * ease(p));
     countText.textContent = Math.ceil(s.time - t);
     progressFill.style.width = (p * 100).toFixed(1) + "%";
-    const elapsed = session.doneBefore + t;
-    totalFill.style.width = (elapsed / session.total * 100).toFixed(1) + "%";
-    statusLine.textContent = fmtMsg(MSG.status_running,
-      { round: session.round, rounds: session.values.rounds, left: fmt(session.total - elapsed) });
     rafId = requestAnimationFrame(tick);
   }
 
@@ -419,30 +409,21 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     setButtons();
   }
 
-  function reset(label, status) {
+  function stop() {
+    if (state === "idle") return;
+    // Count cycles finished right up to the moment of stopping (or pausing).
+    advance(state === "paused" ? session.pausedAt : performance.now(), false);
+    const s = session;
     cancelAnimationFrame(rafId);
+    session = null;
     state = "idle";
     setButtons();
     setScale(0.75);
-    guide.textContent = label;
+    guide.textContent = MSG.phase_ready;
     countText.textContent = "";
     progressFill.style.width = "0%";
-    statusLine.textContent = status;
-  }
-
-  function stop() {
-    if (state === "idle") return;
-    reset(MSG.phase_ready, MSG.status_stopped);
-    totalFill.style.width = "0%";
-    session = null;
-  }
-
-  function finish() {
-    const s = session;
-    const finished = s.values.rounds === 1 ? MSG.status_finished_one : MSG.status_finished_other;
-    reset(MSG.phase_done, fmtMsg(finished, { rounds: s.values.rounds, time: fmt(s.total) }));
-    totalFill.style.width = "100%";
-    cue(660);
+    doneMsg.className = "done-msg";
+    if (s.cycles < 1) { doneMsg.textContent = ""; return; }   // not even one full breath
     doneMsg.textContent = MSG.done;
     if (!LOGGED_IN) { doneMsg.textContent += MSG.done_login_hint; return; }
     record(s);
@@ -454,7 +435,9 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
   }
 
   function record(s) {
-    const body = Object.assign({}, s.values, { pattern: s.pattern, local_date: localDate() });
+    // rounds = completed cycles; the server derives the duration from it.
+    const body = Object.assign({}, s.values,
+      { rounds: s.cycles, pattern: s.pattern, local_date: localDate() });
     fetch(RECORD_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

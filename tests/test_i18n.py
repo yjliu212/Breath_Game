@@ -15,7 +15,7 @@ CJK = re.compile(r'[一-鿿　-〿＀-￯]')
 # Chinese that is intentionally on English pages: the language switch itself.
 ALLOWED_ON_EN = ('切换到中文 (Switch to Chinese)', 'Language / 语言', '>中文<')
 TODAY = datetime.now(timezone.utc).date().isoformat()
-VALID = {'inhale': '4', 'hold1': '2', 'exhale': '6', 'hold2': '2', 'rounds': '5'}
+VALID = {'inhale': '4', 'hold1': '2', 'exhale': '6', 'hold2': '2'}
 
 
 def html_lang(html):
@@ -72,7 +72,7 @@ def test_default_home_is_chinese(client):
     html = client.get('/').get_data(as_text=True)
     assert html_lang(html) == 'zh-CN'
     assert '<title>呼吸训练小游戏</title>' in html
-    assert '▶ 开始' in html and '选择模式后点击“开始”' in html
+    assert '▶ 开始' in html and '>准备<' in html
     assert 'og:locale" content="zh_CN"' in html
     assert embedded_json(html, 'MSG')['phase_inhale'] == '吸气'
 
@@ -92,7 +92,7 @@ def test_english_home_has_no_leftover_chinese(client):
     msg = embedded_json(html, 'MSG')
     assert msg['phase_inhale'] == 'Inhale' and msg['btn_resume'] == '▶ Resume'
     limits = embedded_json(html, 'LIMITS')
-    assert limits['hold2']['label'] == 'Hold after exhale' and limits['rounds']['label'] == 'Rounds'
+    assert limits['hold2']['label'] == 'Hold after exhale' and 'rounds' not in limits
     leftover = CJK.findall(strip_allowed(html))
     assert not leftover, ''.join(leftover)
 
@@ -252,9 +252,6 @@ def test_english_settings_flashes(client):
     ('hold2', 'nan', 'Hold after exhale must be a valid number.'),
     ('hold2', '-0.5', 'Hold after exhale cannot be negative.'),
     ('exhale', '31', 'Exhale must be between 1 and 30 seconds.'),
-    ('rounds', '', 'Rounds is required.'),
-    ('rounds', '2.5', 'Rounds must be a whole number.'),
-    ('rounds', '51', 'Rounds must be between 1 and 50.'),
 ])
 def test_english_settings_validation(client, field, value, message):
     register(client)

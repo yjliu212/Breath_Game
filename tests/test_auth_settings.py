@@ -72,26 +72,39 @@ def test_home_meta_tags(client):
 
 # ---------------------------------------------------------------- settings
 def test_save_valid_settings(app, auth_client):
+    # The form has no rounds field any more; saving works without it.
     resp = auth_client.post('/save_settings', data={
-        'inhale': '4', 'hold1': '7', 'exhale': '8', 'hold2': '0', 'rounds': '6'})
+        'inhale': '4', 'hold1': '7', 'exhale': '8', 'hold2': '0'})
     assert resp.status_code == 302
     u = get_user(app)
-    assert (u.inhale, u.hold1, u.exhale, u.hold2, u.rounds) == (4.0, 7.0, 8.0, 0.0, 6)
+    assert (u.inhale, u.hold1, u.exhale, u.hold2, u.rounds) == (4.0, 7.0, 8.0, 0.0, 5)
     html = auth_client.get('/').get_data(as_text=True)
     assert '设置已保存' in html
-    assert embedded_json(html, 'SAVED') == {
-        'inhale': 4.0, 'hold1': 7.0, 'exhale': 8.0, 'hold2': 0.0, 'rounds': 6}
+    assert embedded_json(html, 'SAVED') == {'inhale': 4.0, 'hold1': 7.0, 'exhale': 8.0, 'hold2': 0.0}
 
 
-def test_save_without_rounds_is_backwards_compatible(app, auth_client):
+def test_save_with_legacy_rounds_field_still_accepted(app, auth_client):
+    # An old cached page may still post rounds; it is validated and stored, not required.
     resp = auth_client.post('/save_settings', data={
-        'inhale': '5', 'hold1': '1', 'exhale': '7', 'hold2': '1'})
+        'inhale': '5', 'hold1': '1', 'exhale': '7', 'hold2': '1', 'rounds': '6'})
     assert resp.status_code == 302
     u = get_user(app)
-    assert (u.inhale, u.exhale, u.rounds) == (5.0, 7.0, 5)
+    assert (u.inhale, u.exhale, u.rounds) == (5.0, 7.0, 6)
+    assert 'rounds' not in embedded_json(auth_client.get('/').get_data(as_text=True), 'SAVED')
 
 
-VALID = {'inhale': '4', 'hold1': '2', 'exhale': '6', 'hold2': '2', 'rounds': '5'}
+@pytest.mark.parametrize('value,message', [
+    ('0', '轮数需在 1–50 之间'), ('51', '轮数需在 1–50 之间'),
+    ('2.5', '轮数必须是整数'), ('nan', '轮数必须是整数'),
+])
+def test_save_with_invalid_legacy_rounds_rejected(app, auth_client, value, message):
+    resp = auth_client.post('/save_settings', data=dict(VALID, rounds=value), follow_redirects=True)
+    html = resp.get_data(as_text=True)
+    assert message in html and '设置未保存' in html
+    assert get_user(app).rounds == 5
+
+
+VALID = {'inhale': '4', 'hold1': '2', 'exhale': '6', 'hold2': '2'}
 
 
 @pytest.mark.parametrize('field,value,message', [
@@ -107,10 +120,6 @@ VALID = {'inhale': '4', 'hold1': '2', 'exhale': '6', 'hold2': '2', 'rounds': '5'
     ('inhale', '0', '吸气时间需在 1–30 秒之间'),
     ('exhale', '1e9', '呼气时间需在 1–30 秒之间'),
     ('hold1', '31', '吸气后屏息时间需在 0–30 秒之间'),
-    ('rounds', '0', '轮数需在 1–50 之间'),
-    ('rounds', '51', '轮数需在 1–50 之间'),
-    ('rounds', '2.5', '轮数必须是整数'),
-    ('rounds', 'nan', '轮数必须是整数'),
 ])
 def test_save_invalid_settings_rejected(app, auth_client, field, value, message):
     data = dict(VALID, **{field: value})
@@ -150,5 +159,5 @@ def test_legacy_invalid_values_fall_back_to_defaults(app, auth_client, bad):
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
     saved = embedded_json(html, 'SAVED')        # json.loads would fail on None/inf/nan literals
-    assert saved == {'inhale': 4.0, 'hold1': 2.0, 'exhale': 6.0, 'hold2': 2.0, 'rounds': 5}
+    assert saved == {'inhale': 4.0, 'hold1': 2.0, 'exhale': 6.0, 'hold2': 2.0}
     assert 'None' not in re.search(r'const SAVED = .*', html).group(0)
