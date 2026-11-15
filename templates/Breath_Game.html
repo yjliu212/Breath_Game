@@ -1,258 +1,475 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>呼吸训练游戏</title>
+{% include '_head.html' %}
+<title>呼吸训练小游戏</title>
 
 <style>
+* { box-sizing: border-box; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
   background: #0f172a;
   color: #e2e8f0;
   text-align: center;
-  padding: 20px;
-}
-
-h1 { margin-bottom: 10px; }
-
-.settings {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.settings input {
-  width: 70px;
-  padding: 6px;
-  border-radius: 6px;
-  border: 1px solid #475569;
-  background: #1e293b;
-  color: #e2e8f0;
-}
-
-button {
-  background: #22c55e;
-  color: #052e16;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  margin-top: 10px;
-}
-
-.circle {
-  width: 160px;
-  height: 160px;
-  margin: 30px auto;
-  border-radius: 50%;
-  background: radial-gradient(circle, #22c55e, #14532d);
-  transition: transform 1s linear;
-}
-
-#guideText {
-  font-size: 24px;
-  margin-top: 10px;
-  min-height: 30px;
-}
-
-.progressBar {
-  width: 80%;
-  height: 10px;
-  background: #334155;
-  border-radius: 5px;
-  margin: 15px auto;
-  overflow: hidden;
-}
-.progressBarFill {
-  height: 100%;
-  width: 0%;
-  background: #22c55e;
-  transition: width 0.1s linear;
-}
-
-.breathing-info {
-  margin-top: 20px;
+  margin: 0;
   padding: 16px;
-  background: #1e293b;
-  border-radius: 10px;
-  color: #e2e8f0;
-  line-height: 1.6;
 }
-.breathing-info h2 {
-  margin-bottom: 10px;
-}
-
-.breathing-info {
-  margin-top: 20px;
-  padding: 12px;
-  background: #1e293b;
-  border-radius: 10px;
-  color: #e2e8f0;
+main { max-width: 720px; margin: 0 auto; }
+h1 { margin: 8px 0 6px; font-size: clamp(24px, 6vw, 32px); }
+a { color: #4ade80; }
+.user-bar { margin: 0 0 12px; }
+button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visible, label.chip:focus-within {
+  outline: 3px solid #86efac; outline-offset: 2px;
 }
 
-.breathing-info summary {
-  outline: none;
-}
+.flash { list-style: none; padding: 0; margin: 0 auto 12px; text-align: left; }
+.flash li { padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; background: #1e3a2a; color: #bbf7d0; }
+.flash li.error { background: #450a0a; color: #fecaca; }
 
-.breathing-info .content {
-  margin-top: 10px;
-  line-height: 1.6;
-}
+.card { background: #1e293b; border-radius: 12px; padding: 14px; margin: 12px 0; }
 
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat b { display: block; font-size: 24px; color: #4ade80; }
+.stat span { font-size: 13px; color: #94a3b8; }
+
+/* Practice stage */
+.stage { position: relative; height: 250px; display: flex; align-items: center; justify-content: center; }
+.circle {
+  width: 170px; height: 170px; border-radius: 50%;
+  background: radial-gradient(circle, #22c55e, #14532d);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transform: scale(0.75);
+  will-change: transform;
+  box-shadow: 0 0 40px rgba(34, 197, 94, 0.25);
+}
+.circle .phase { font-size: 24px; font-weight: 600; color: #f0fdf4; }
+.circle .count { font-size: 34px; font-variant-numeric: tabular-nums; color: #f0fdf4; min-height: 40px; }
+.status-line { min-height: 24px; color: #cbd5e1; font-variant-numeric: tabular-nums; }
+.progressBar { width: 100%; height: 10px; background: #334155; border-radius: 5px; margin: 10px auto; overflow: hidden; }
+.progressBar.total { height: 6px; }
+.progressBarFill { height: 100%; width: 0%; background: #22c55e; }
+.progressBar.total .progressBarFill { background: #38bdf8; }
+
+.controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 6px 0; }
+button {
+  background: #22c55e; color: #052e16; border: none;
+  min-height: 48px; padding: 10px 22px; border-radius: 10px;
+  cursor: pointer; font-size: 17px; font-weight: 600;
+}
+button.secondary { background: #334155; color: #e2e8f0; }
+button.danger { background: #f87171; color: #450a0a; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.done-msg { min-height: 24px; color: #bbf7d0; margin: 8px 0 0; }
+.done-msg.error { color: #fecaca; }
+
+/* Settings */
+fieldset { border: none; padding: 0; margin: 0; min-width: 0; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 12px; }
+label.chip {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px;
+  border-radius: 999px; border: 1px solid #475569; cursor: pointer; font-size: 15px;
+}
+label.chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-color: #22c55e; }
+.preset-desc { color: #94a3b8; font-size: 14px; min-height: 20px; margin: 0 0 10px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; text-align: left; }
+.fields label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: #cbd5e1; }
+.fields .input-wrap { display: flex; align-items: center; gap: 6px; }
+.fields input {
+  width: 100%; min-height: 44px; padding: 8px 10px; font-size: 17px;
+  border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #e2e8f0;
+}
+.fields input[aria-invalid="true"] { border-color: #f87171; }
+.form-error { color: #fecaca; min-height: 20px; margin: 8px 0 0; text-align: left; }
+.options { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+.options label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; }
+.options input { width: 20px; height: 20px; }
+.hint { color: #94a3b8; font-size: 13px; }
+
+.breathing-info { text-align: left; line-height: 1.6; }
+.breathing-info summary { font-size: 17px; cursor: pointer; text-align: center; min-height: 32px; }
+.breathing-info .content { margin-top: 10px; }
+
+@media (max-width: 480px) {
+  body { padding: 12px; }
+  .stage { height: 220px; }
+  .circle { width: 150px; height: 150px; }
+  .controls button { flex: 1 1 40%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .circle { box-shadow: none; }
+}
 </style>
 </head>
 
 <body>
-
+<main>
 <h1>🌿 呼吸训练小游戏</h1>
 {% if current_user.is_authenticated %}
-<p>Welcome, {{ current_user.username }}! <a href="{{ url_for('logout') }}" style="color: #22c55e;"">登出</a></p>
+<p class="user-bar">欢迎，{{ current_user.username }}！ <a href="{{ url_for('logout') }}">登出</a></p>
 {% else %}
-<p><a href="{{ url_for('login') }}" style="color: #22c55e;">登录</a> | <a href="{{ url_for('register') }}" style="color:#22c55e;">注册</a></p>
-{% endif %}
-<p>输入你的 4-2-6-2（吸气-憋气-呼气-憋气）时间，开始训练：</p>
-
-<div class="settings">
-  吸气 <input id="inhale" type="number" value="4">
-  憋气1 <input id="hold1" type="number" value="2">
-  呼气 <input id="exhale" type="number" value="6">
-  憋气2 <input id="hold2" type="number" value="2">
-</div>
-
-<button id="startBtn">开始训练</button>
-{% if current_user.is_authenticated %}
-<button id="saveBtn">保存设置</button>
+<p class="user-bar"><a href="{{ url_for('login') }}">登录</a> | <a href="{{ url_for('register') }}">注册</a> <span class="hint">（登录后可保存设置、记录练习）</span></p>
 {% endif %}
 
-<form id="saveForm" method="POST" action="{{ url_for('save_settings') }}" style="display: none;">
-  <input name="inhale" id="inhaleForm">
-  <input name="hold1" id="hold1Form">
-  <input name="exhale" id="exhaleForm">
-  <input name="hold2" id="hold2Form">
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <ul class="flash" role="status">
+    {% for category, message in messages %}<li class="{{ category }}">{{ message }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+{% endwith %}
+
+{% if stats %}
+<section class="card stats" aria-label="练习统计">
+  <div class="stat"><b id="statSessions">{{ stats.sessions }}</b><span>完成次数</span></div>
+  <div class="stat"><b id="statMinutes">{{ stats.minutes }}</b><span>累计分钟</span></div>
+  <div class="stat"><b id="statStreak">{{ stats.streak }}</b><span>连续天数</span></div>
+</section>
+{% endif %}
+
+<section aria-label="练习">
+  <div class="stage">
+    <div class="circle" id="circle">
+      <div class="phase" id="guideText" aria-live="polite">准备</div>
+      <div class="count" id="countText"></div>
+    </div>
+  </div>
+  <div class="status-line" id="statusLine">选择模式后点击“开始”</div>
+  <div class="progressBar" title="当前阶段进度"><div class="progressBarFill" id="progressFill"></div></div>
+  <div class="progressBar total" title="总进度"><div class="progressBarFill" id="totalFill"></div></div>
+  <div class="controls">
+    <button type="button" id="startBtn">▶ 开始</button>
+    <button type="button" id="pauseBtn" class="secondary" hidden>⏸ 暂停</button>
+    <button type="button" id="stopBtn" class="danger" hidden>■ 停止</button>
+  </div>
+  <p class="done-msg" id="doneMsg" aria-live="polite"></p>
+</section>
+
+<form id="settingsForm" class="card" method="POST" action="{{ url_for('save_settings') }}" novalidate>
+  <fieldset id="settingsFieldset">
+    <div class="presets" role="radiogroup" aria-label="呼吸模式">
+      <label class="chip"><input type="radio" name="pattern" value="relax">放松 4-2-6-2</label>
+      <label class="chip"><input type="radio" name="pattern" value="478">4-7-8 助眠</label>
+      <label class="chip"><input type="radio" name="pattern" value="box">方块 4-4-4-4</label>
+      <label class="chip"><input type="radio" name="pattern" value="coherent">平衡 5-5</label>
+      <label class="chip"><input type="radio" name="pattern" value="custom">自定义</label>
+    </div>
+    <p class="preset-desc" id="presetDesc"></p>
+    <div class="fields">
+      {% for name in ['inhale', 'hold1', 'exhale', 'hold2', 'rounds'] %}
+      {% set lim = limits[name] %}
+      <label>{{ lim.label }}{% if name != 'rounds' %}（秒）{% endif %}
+        <span class="input-wrap">
+          <input id="{{ name }}" name="{{ name }}" type="number"
+                 inputmode="{{ 'numeric' if name == 'rounds' else 'decimal' }}"
+                 min="{{ lim.min }}" max="{{ lim.max }}" step="{{ 1 if name == 'rounds' else 0.5 }}"
+                 value="{{ lim.default }}" required>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+    <p class="form-error" id="formError" role="alert"></p>
+    <div class="options">
+      <label><input type="checkbox" id="soundOpt"> 🔔 声音提示</label>
+      <label><input type="checkbox" id="vibrateOpt"> 📳 振动提示</label>
+    </div>
+    {% if current_user.is_authenticated %}
+    <div class="controls"><button type="submit" id="saveBtn" class="secondary">保存设置</button></div>
+    {% endif %}
+  </fieldset>
 </form>
 
-<div class="circle" id="circle"></div>
-
-
-<div id="guideText"></div>
-
-<div class="progressBar">
-  <div class="progressBarFill" id="progressFill"></div>
-</div>
-
-
-<!--<div class="breathing-info">
-  <h2>🌿 呼吸训练的原理</h2>
-  <p><strong>延长呼气能快速让身体进入放松模式。</strong> 呼气时副交感神经占主导，会降低心率、血压和紧张感，因此像 4-2-6-2 这样的节奏尤其有效。</p>
-
-  <p><strong>为什么要憋气？</strong></p>
-  <ul style="text-align:left; max-width:720px; margin:0 auto;">
-    <li><strong>吸气后的屏息</strong>可以让身体更快转入呼气阶段，增强放松效果。</li>
-    <li><strong>呼气后的屏息</strong>能进一步稳定状态，让副交感神经维持更久。</li>
-  </ul>
-
-  <p><strong>呼吸如何影响身体？</strong> 深呼吸能让神经系统从“紧张应激”转向“恢复修复”，增强迷走神经活动，让心率更平稳，使你在压力中也能保持冷静。</p>
-
-  <p><em>每一次延长呼气，都在让你的身体变得更平静；每一次屏息，都在帮助你重新掌控生活的节奏。</em></p>
-</div>-->
-
-<details class="breathing-info">
-  <summary style="font-size:18px; cursor:pointer;">
-    🌿 点击展开 / 隐藏呼吸训练原理
-  </summary>
-
+<details class="breathing-info card">
+  <summary>🌿 点击展开 / 隐藏呼吸训练原理</summary>
   <div class="content">
-    <!-- 你的呼吸原理文字放这里 -->
     <h2>呼吸训练的原理</h2>
     <p><strong>延长呼气能快速让身体进入放松模式。</strong> 呼气时副交感神经占主导，可降低心率和紧张感。</p>
-
-    <p><strong>为什么要憋气？</strong></p>
+    <p><strong>为什么要屏息？</strong></p>
     <ul>
       <li><strong>吸气后的屏息</strong>让呼气的放松效果更强。</li>
       <li><strong>呼气后的屏息</strong>让副交感神经更稳定。</li>
     </ul>
-
     <p><strong>呼吸对身体的影响：</strong> 深呼吸能让神经系统从“紧张应激”转向“恢复修复”。</p>
-
     <p><em>每一次延长呼气，都在让你的身体变得更平静。</em></p>
+    <p class="hint">如练习中感到头晕或不适，请停止并恢复自然呼吸。</p>
   </div>
 </details>
+</main>
 
 <script>
-const circle = document.getElementById("circle");
-const guide = document.getElementById("guideText");
-const progressFill = document.getElementById("progressFill");
+(function () {
+  "use strict";
+  const LIMITS = {{ limits|tojson }};
+  const SAVED = {{ settings|tojson }};
+  const LOGGED_IN = {{ current_user.is_authenticated|tojson }};
+  const RECORD_URL = {{ url_for('record_session')|tojson }};
+  const FIELDS = ["inhale", "hold1", "exhale", "hold2"];
+  const PRESETS = {
+    relax:    { inhale: 4, hold1: 2, exhale: 6, hold2: 2, desc: "延长呼气，适合日常放松减压。" },
+    "478":    { inhale: 4, hold1: 7, exhale: 8, hold2: 0, desc: "吸 4 秒、屏 7 秒、呼 8 秒，常用于睡前助眠。" },
+    box:      { inhale: 4, hold1: 4, exhale: 4, hold2: 4, desc: "四段等长，帮助集中注意力、稳定情绪。" },
+    coherent: { inhale: 5, hold1: 0, exhale: 5, hold2: 0, desc: "每分钟约 6 次的平稳呼吸，平衡身心。" },
+    custom:   { desc: "自由设置每个阶段的时长。" }
+  };
+  const SMALL = 0.65, BIG = 1.25;
 
-let running = false;
+  const $ = (id) => document.getElementById(id);
+  const circle = $("circle"), guide = $("guideText"), countText = $("countText");
+  const statusLine = $("statusLine"), progressFill = $("progressFill"), totalFill = $("totalFill");
+  const startBtn = $("startBtn"), pauseBtn = $("pauseBtn"), stopBtn = $("stopBtn");
+  const doneMsg = $("doneMsg"), formError = $("formError"), fieldset = $("settingsFieldset");
+  const presetRadios = Array.from(document.querySelectorAll('input[name="pattern"]'));
+  const soundOpt = $("soundOpt"), vibrateOpt = $("vibrateOpt");
 
-// Load settings if available
-{% if settings %}
-document.getElementById("inhale").value = {{ settings.inhale }};
-document.getElementById("hold1").value = {{ settings.hold1 }};
-document.getElementById("exhale").value = {{ settings.exhale }};
-document.getElementById("hold2").value = {{ settings.hold2 }};
-{% endif %}
+  // ---------- settings & presets ----------
+  function setPattern(key) {
+    presetRadios.forEach((r) => { r.checked = r.value === key; });
+    $("presetDesc").textContent = PRESETS[key].desc;
+  }
+  function currentPattern() {
+    const r = presetRadios.find((x) => x.checked);
+    return r ? r.value : "custom";
+  }
+  function detectPattern() {
+    for (const key of Object.keys(PRESETS)) {
+      const p = PRESETS[key];
+      if (key !== "custom" && FIELDS.every((f) => Number($(f).value) === p[f])) return key;
+    }
+    return "custom";
+  }
+  presetRadios.forEach((r) => r.addEventListener("change", () => {
+    const p = PRESETS[r.value];
+    if (r.value !== "custom") FIELDS.forEach((f) => { $(f).value = p[f]; });
+    setPattern(r.value);
+    clearErrors();
+  }));
+  FIELDS.forEach((f) => $(f).addEventListener("input", () => setPattern(detectPattern())));
 
-document.getElementById("startBtn").addEventListener("click", () => {
-  if (running) return;
-  running = true;
-  startBreathingCycle();
-});
+  if (SAVED) {
+    FIELDS.concat(["rounds"]).forEach((f) => { $(f).value = SAVED[f]; });
+  }
+  setPattern(detectPattern());
 
-{% if current_user.is_authenticated %}
-document.getElementById("saveBtn").addEventListener("click", () => {
-  document.getElementById("inhaleForm").value = document.getElementById("inhale").value;
-  document.getElementById("hold1Form").value = document.getElementById("hold1").value;
-  document.getElementById("exhaleForm").value = document.getElementById("exhale").value;
-  document.getElementById("hold2Form").value = document.getElementById("hold2").value;
-  document.getElementById("saveForm").submit();
-});
-{% endif %}
-
-function startBreathingCycle() {
-  const inhale = parseFloat(document.getElementById("inhale").value);
-  const hold1 = parseFloat(document.getElementById("hold1").value);
-  const exhale = parseFloat(document.getElementById("exhale").value);
-  const hold2 = parseFloat(document.getElementById("hold2").value);
-
-  // 呼吸 4 阶段
-  const steps = [
-    { label: "吸气", time: inhale, scale: 1.3 },
-    { label: "憋气", time: hold1, scale: 1.3 },
-    { label: "呼气", time: exhale, scale: 0.6 },
-    { label: "憋气", time: hold2, scale: 0.6 }
-  ];
-
-  let index = 0;
-
-  function runStep() {
-    const step = steps[index];
-    guide.innerText = step.label;
-
-    // 圆圈动画
-    circle.style.transition = `transform ${step.time}s linear`;
-    circle.style.transform = `scale(${step.scale})`;
-
-    // 进度条动画
-    let elapsed = 0;
-    progressFill.style.width = "0%";
-    const interval = setInterval(() => {
-      elapsed += 0.1;
-      progressFill.style.width = `${(elapsed / step.time) * 100}%`;
-      if (elapsed >= step.time) {
-        clearInterval(interval);
-        index = (index + 1) % steps.length;
-        runStep();
-      }
-    }, 100);
+  function clearErrors() {
+    formError.textContent = "";
+    FIELDS.concat(["rounds"]).forEach((f) => $(f).removeAttribute("aria-invalid"));
   }
 
-  runStep();
-}
+  // Mirrors the server-side validation in app.py.
+  function readSettings() {
+    clearErrors();
+    const values = {}, errors = [];
+    FIELDS.concat(["rounds"]).forEach((f) => {
+      const lim = LIMITS[f], raw = $(f).value.trim(), v = Number(raw);
+      let err = null;
+      if (raw === "") err = lim.label + "不能为空";
+      else if (!Number.isFinite(v)) err = lim.label + "必须是数字";
+      else if (v < 0) err = lim.label + "不能为负数";
+      else if (v < lim.min || v > lim.max) err = lim.label + "需在 " + lim.min + "–" + lim.max + " 之间";
+      else if (f === "rounds" && !Number.isInteger(v)) err = "轮数必须是整数";
+      if (err) { errors.push(err); $(f).setAttribute("aria-invalid", "true"); }
+      values[f] = v;
+    });
+    if (errors.length) { formError.textContent = errors.join("；"); return null; }
+    return values;
+  }
+
+  $("settingsForm").addEventListener("submit", (e) => {
+    if (!readSettings()) e.preventDefault();
+  });
+
+  // ---------- sound / vibration (off by default, remembered locally) ----------
+  function loadOpt(el, key) {
+    try { el.checked = localStorage.getItem(key) === "1"; } catch (e) { /* storage blocked */ }
+    el.addEventListener("change", () => {
+      try { localStorage.setItem(key, el.checked ? "1" : "0"); } catch (e) { /* ignore */ }
+      if (el === soundOpt && el.checked) ensureAudio();
+    });
+  }
+  loadOpt(soundOpt, "breath.sound");
+  loadOpt(vibrateOpt, "breath.vibrate");
+  if (!("vibrate" in navigator)) { vibrateOpt.disabled = true; vibrateOpt.parentElement.title = "此设备不支持振动"; }
+
+  let audioCtx = null;
+  function ensureAudio() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function cue(freq) {
+    if (soundOpt.checked) {
+      const ctx = ensureAudio();
+      if (ctx) {
+        const osc = ctx.createOscillator(), gain = ctx.createGain(), t = ctx.currentTime;
+        osc.type = "sine"; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.15, t + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.4);
+      }
+    }
+    if (vibrateOpt.checked && navigator.vibrate) navigator.vibrate(60);
+  }
+
+  // ---------- practice engine ----------
+  let state = "idle";      // idle | running | paused
+  let session = null, rafId = null;
+
+  function fmt(sec) {
+    sec = Math.max(0, Math.ceil(sec));
+    return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
+  }
+  function ease(p) { return 0.5 - Math.cos(Math.PI * p) / 2; }
+  function setScale(s) { circle.style.transform = "scale(" + s + ")"; }
+
+  function buildSteps(v) {
+    return [
+      { label: "吸气", time: v.inhale, from: SMALL, to: BIG, freq: 523 },
+      { label: "屏息", time: v.hold1, from: BIG, to: BIG, freq: 440 },
+      { label: "呼气", time: v.exhale, from: BIG, to: SMALL, freq: 392 },
+      { label: "屏息", time: v.hold2, from: SMALL, to: SMALL, freq: 440 }
+    ].filter((s) => s.time > 0);
+  }
+
+  function setButtons() {
+    startBtn.hidden = state !== "idle";
+    pauseBtn.hidden = stopBtn.hidden = state === "idle";
+    pauseBtn.textContent = state === "paused" ? "▶ 继续" : "⏸ 暂停";
+    fieldset.disabled = state !== "idle";
+  }
+
+  function start() {
+    const v = readSettings();
+    if (!v) { doneMsg.textContent = ""; return; }
+    if (soundOpt.checked) ensureAudio();   // must be created inside a user gesture
+    const steps = buildSteps(v);
+    const cycle = steps.reduce((a, s) => a + s.time, 0);
+    session = {
+      values: v, pattern: currentPattern(), steps: steps, cycle: cycle,
+      total: cycle * v.rounds, round: 1, idx: 0,
+      phaseStart: performance.now(), pausedAt: 0, doneBefore: 0
+    };
+    doneMsg.textContent = ""; doneMsg.className = "done-msg";
+    state = "running";
+    setButtons();
+    enterPhase();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function enterPhase() {
+    const s = session.steps[session.idx];
+    guide.textContent = s.label;
+    cue(s.freq);
+  }
+
+  function tick(now) {
+    if (state !== "running") return;
+    let s = session.steps[session.idx];
+    let t = (now - session.phaseStart) / 1000;
+    while (t >= s.time) {               // advance (also catches up after a background tab)
+      session.phaseStart += s.time * 1000;
+      session.doneBefore += s.time;
+      t -= s.time;
+      session.idx += 1;
+      if (session.idx >= session.steps.length) {
+        session.idx = 0;
+        session.round += 1;
+        if (session.round > session.values.rounds) { finish(); return; }
+      }
+      s = session.steps[session.idx];
+      enterPhase();
+    }
+    const p = t / s.time;
+    setScale(s.from + (s.to - s.from) * ease(p));
+    countText.textContent = Math.ceil(s.time - t);
+    progressFill.style.width = (p * 100).toFixed(1) + "%";
+    const elapsed = session.doneBefore + t;
+    totalFill.style.width = (elapsed / session.total * 100).toFixed(1) + "%";
+    statusLine.textContent = "第 " + session.round + " / " + session.values.rounds + " 轮 · 剩余 " + fmt(session.total - elapsed);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function togglePause() {
+    if (state === "running") {
+      state = "paused";
+      cancelAnimationFrame(rafId);
+      session.pausedAt = performance.now();
+      guide.textContent = "已暂停";
+    } else if (state === "paused") {
+      state = "running";
+      session.phaseStart += performance.now() - session.pausedAt;
+      guide.textContent = session.steps[session.idx].label;
+      rafId = requestAnimationFrame(tick);
+    }
+    setButtons();
+  }
+
+  function reset(label, status) {
+    cancelAnimationFrame(rafId);
+    state = "idle";
+    setButtons();
+    setScale(0.75);
+    guide.textContent = label;
+    countText.textContent = "";
+    progressFill.style.width = "0%";
+    statusLine.textContent = status;
+  }
+
+  function stop() {
+    if (state === "idle") return;
+    reset("准备", "已停止，本次未完成不计入记录");
+    totalFill.style.width = "0%";
+    session = null;
+  }
+
+  function finish() {
+    const s = session;
+    reset("完成", "完成 " + s.values.rounds + " 轮，用时 " + fmt(s.total));
+    totalFill.style.width = "100%";
+    cue(660);
+    doneMsg.textContent = "🎉 太棒了！本次练习已完成。";
+    if (!LOGGED_IN) { doneMsg.textContent += " 登录后可记录练习并查看统计。"; return; }
+    record(s);
+  }
+
+  function localDate() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  function record(s) {
+    const body = Object.assign({}, s.values, { pattern: s.pattern, local_date: localDate() });
+    fetch(RECORD_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(body)
+    }).then((r) => r.json().then((data) => ({ ok: r.ok, data: data })))
+      .then((res) => {
+        if (res.ok && res.data.ok) {
+          doneMsg.textContent += " 已记录 ✔";
+          $("statSessions").textContent = res.data.stats.sessions;
+          $("statMinutes").textContent = res.data.stats.minutes;
+          $("statStreak").textContent = res.data.stats.streak;
+        } else {
+          doneMsg.className = "done-msg error";
+          doneMsg.textContent += " 记录失败：" + (res.data.error || "未知错误");
+        }
+      })
+      .catch(() => {
+        doneMsg.className = "done-msg error";
+        doneMsg.textContent += " 记录失败：网络错误，请稍后重试。";
+      });
+  }
+
+  startBtn.addEventListener("click", start);
+  pauseBtn.addEventListener("click", togglePause);
+  stopBtn.addEventListener("click", stop);
+  setButtons();
+})();
 </script>
 
 </body>
