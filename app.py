@@ -456,6 +456,12 @@ def register_routes(app):
         return send_from_directory(app.static_folder, 'robots.txt', mimetype='text/plain',
                                    max_age=86400)
 
+    @app.route('/googlec6cb5e372d7fcf40.html')
+    def google_site_verification():
+        # Google Search Console ownership file (URL-prefix property).
+        return send_from_directory(app.static_folder, 'googlec6cb5e372d7fcf40.html',
+                                   mimetype='text/html')
+
     @app.route('/sitemap.xml')
     def sitemap():
         urls = ''.join(f'  <url><loc>{escape(absolute_url(url_for(ep)))}</loc></url>\n'

@@ -184,3 +184,9 @@ def test_robots_txt(client):
                    for ln in lines)
     assert 'Disallow: /' not in lines
     assert f'Sitemap: {SITE}/sitemap.xml' in lines
+
+
+def test_google_site_verification_file(client):
+    resp = client.get('/googlec6cb5e372d7fcf40.html')
+    assert resp.status_code == 200
+    assert resp.get_data(as_text=True).strip() == 'google-site-verification: googlec6cb5e372d7fcf40.html'
