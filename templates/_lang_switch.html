@@ -1,0 +1,9 @@
+{%- set here = request.full_path.rstrip('?') if request.method == 'GET' else request.path -%}
+<nav class="lang-bar" aria-label="{{ t('lang.switch_label') }}">
+  <div class="lang-switch">
+    <a href="{{ url_for('set_language', code='zh', next=here) }}" lang="zh-CN" hreflang="zh-CN" rel="nofollow"
+       title="{{ t('lang.to_zh') }}" {% if lang == 'zh' %}aria-current="true"{% endif %}>中文</a>
+    <a href="{{ url_for('set_language', code='en', next=here) }}" lang="en" hreflang="en" rel="nofollow"
+       title="{{ t('lang.to_en') }}" aria-label="English" {% if lang == 'en' %}aria-current="true"{% endif %}>EN</a>
+  </div>
+</nav>

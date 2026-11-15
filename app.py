@@ -1,5 +1,5 @@
 from flask import (Flask, render_template, request, redirect, url_for, flash,
-                   jsonify, send_from_directory)
+                   jsonify, send_from_directory, abort)
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
@@ -9,23 +9,28 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import inspect, text, func
 from sqlalchemy.exc import OperationalError
 from datetime import datetime, date, timedelta, timezone
+from urllib.parse import urlsplit
 import math
 import os
+
+import i18n
+from i18n import t, LazyText
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = 'login'
-login_manager.login_message = '请先登录。'
+login_manager.login_message = 'err.login_required'   # i18n key, see localize_callback
+login_manager.localize_callback = t
 
 # ---------------------------------------------------------------------------
 # Breathing settings: allowed ranges (seconds) and defaults
 # ---------------------------------------------------------------------------
 SETTING_FIELDS = {
-    # name: (label, min, max, default)
-    'inhale': ('吸气', 1.0, 30.0, 4.0),
-    'hold1': ('吸气后屏息', 0.0, 30.0, 2.0),
-    'exhale': ('呼气', 1.0, 30.0, 6.0),
-    'hold2': ('呼气后屏息', 0.0, 30.0, 2.0),
+    # name: (label i18n key, min, max, default)
+    'inhale': ('field.inhale', 1.0, 30.0, 4.0),
+    'hold1': ('field.hold1', 0.0, 30.0, 2.0),
+    'exhale': ('field.exhale', 1.0, 30.0, 6.0),
+    'hold2': ('field.hold2', 0.0, 30.0, 2.0),
 }
 ROUNDS_MIN, ROUNDS_MAX, ROUNDS_DEFAULT = 1, 50, 5
 PATTERNS = {'relax', '478', 'box', 'coherent', 'custom'}
@@ -34,37 +39,38 @@ MAX_SESSIONS_PER_DAY = 200
 
 def parse_setting(name, raw):
     """Validate one breathing-phase duration. Returns (value, error_message)."""
-    label, lo, hi, _ = SETTING_FIELDS[name]
+    label_key, lo, hi, _ = SETTING_FIELDS[name]
+    label = t(label_key)
     if raw is None or (isinstance(raw, str) and raw.strip() == ''):
-        return None, f'{label}时间不能为空。'
+        return None, t('err.setting_empty', label=label)
     if isinstance(raw, bool):
-        return None, f'{label}时间必须是数字。'
+        return None, t('err.setting_nan', label=label)
     try:
         value = float(raw.strip() if isinstance(raw, str) else raw)
     except (TypeError, ValueError):
-        return None, f'{label}时间必须是数字。'
+        return None, t('err.setting_nan', label=label)
     if not math.isfinite(value):
-        return None, f'{label}时间必须是有效数字。'
+        return None, t('err.setting_invalid', label=label)
     if value < 0:
-        return None, f'{label}时间不能为负数。'
+        return None, t('err.setting_negative', label=label)
     if value < lo or value > hi:
-        return None, f'{label}时间需在 {lo:g}–{hi:g} 秒之间。'
+        return None, t('err.setting_range', label=label, lo=f'{lo:g}', hi=f'{hi:g}')
     return round(value, 1), None
 
 
 def parse_rounds(raw):
     if raw is None or (isinstance(raw, str) and raw.strip() == ''):
-        return None, '轮数不能为空。'
+        return None, t('err.rounds_empty')
     if isinstance(raw, bool):
-        return None, '轮数必须是整数。'
+        return None, t('err.rounds_int')
     try:
         value = float(raw.strip() if isinstance(raw, str) else raw)
     except (TypeError, ValueError):
-        return None, '轮数必须是整数。'
+        return None, t('err.rounds_int')
     if not math.isfinite(value) or value != int(value):
-        return None, '轮数必须是整数。'
+        return None, t('err.rounds_int')
     if not ROUNDS_MIN <= value <= ROUNDS_MAX:
-        return None, f'轮数需在 {ROUNDS_MIN}–{ROUNDS_MAX} 之间。'
+        return None, t('err.rounds_range', lo=ROUNDS_MIN, hi=ROUNDS_MAX)
     return int(value), None
 
 
@@ -188,16 +194,25 @@ def compute_stats(user_id, today=None):
 # ---------------------------------------------------------------------------
 # Forms
 # ---------------------------------------------------------------------------
+# Labels and messages are LazyText so they are translated per request when rendered.
+def _username_field():
+    return StringField(LazyText('form.username'), validators=[
+        DataRequired(LazyText('form.username_required')),
+        Length(min=2, max=150, message=LazyText('form.username_length'))])
+
+
 class LoginForm(FlaskForm):
-    username = StringField('用户名', validators=[DataRequired('请输入用户名'), Length(min=2, max=150, message='用户名长度需为 2–150 个字符')])
-    password = PasswordField('密码', validators=[DataRequired('请输入密码')])
-    submit = SubmitField('登录')
+    username = _username_field()
+    password = PasswordField(LazyText('form.password'), validators=[DataRequired(LazyText('form.password_required'))])
+    submit = SubmitField(LazyText('auth.login'))
 
 
 class RegisterForm(FlaskForm):
-    username = StringField('用户名', validators=[DataRequired('请输入用户名'), Length(min=2, max=150, message='用户名长度需为 2–150 个字符')])
-    password = PasswordField('密码', validators=[DataRequired('请输入密码'), Length(min=6, message='密码至少 6 位')])
-    submit = SubmitField('注册')
+    username = _username_field()
+    password = PasswordField(LazyText('form.password'), validators=[
+        DataRequired(LazyText('form.password_required')),
+        Length(min=6, message=LazyText('form.password_length'))])
+    submit = SubmitField(LazyText('auth.register'))
 
 
 # ---------------------------------------------------------------------------
@@ -236,6 +251,7 @@ def create_app(test_config=None):
 
     db.init_app(app)
     login_manager.init_app(app)
+    i18n.init_app(app)
     register_routes(app)
 
     with app.app_context():
@@ -248,7 +264,28 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
+def safe_next(target):
+    """Only allow same-site relative paths as redirect targets."""
+    if (not isinstance(target, str) or not target.startswith('/') or target.startswith('//')
+            or '\\' in target or any(ord(c) < 32 for c in target)):
+        return url_for('home')
+    parts = urlsplit(target)
+    if parts.scheme or parts.netloc:
+        return url_for('home')
+    return target
+
+
 def register_routes(app):
+
+    @app.route('/lang/<code>')
+    def set_language(code):
+        lang = i18n.normalize_lang(code)
+        if not lang:
+            abort(404)
+        resp = redirect(safe_next(request.args.get('next')))
+        resp.set_cookie(i18n.COOKIE_NAME, lang, max_age=i18n.COOKIE_MAX_AGE, path='/',
+                        samesite='Lax', secure=request.is_secure, httponly=True)
+        return resp
 
     @app.route("/")
     def home():
@@ -258,10 +295,12 @@ def register_routes(app):
             settings = {name: safe_setting(name, getattr(current_user, name)) for name in SETTING_FIELDS}
             settings['rounds'] = safe_rounds(current_user.rounds)
             stats = compute_stats(current_user.id)
-        limits = {name: {'label': f[0], 'min': f[1], 'max': f[2], 'default': f[3]}
+        limits = {name: {'label': t(f[0]), 'min': f[1], 'max': f[2], 'default': f[3]}
                   for name, f in SETTING_FIELDS.items()}
-        limits['rounds'] = {'label': '轮数', 'min': ROUNDS_MIN, 'max': ROUNDS_MAX, 'default': ROUNDS_DEFAULT}
-        return render_template("Breath_Game.html", settings=settings, stats=stats, limits=limits)
+        limits['rounds'] = {'label': t('field.rounds'), 'min': ROUNDS_MIN, 'max': ROUNDS_MAX,
+                            'default': ROUNDS_DEFAULT}
+        return render_template("Breath_Game.html", settings=settings, stats=stats, limits=limits,
+                               js_messages=i18n.js_messages())
 
     @app.route('/login', methods=['GET', 'POST'])
     def login():
@@ -271,7 +310,7 @@ def register_routes(app):
             if user and user.check_password(form.password.data):
                 login_user(user)
                 return redirect(url_for('home'))
-            flash('用户名或密码错误', 'error')
+            flash(t('flash.bad_credentials'), 'error')
         return render_template('login.html', form=form)
 
     @app.route('/register', methods=['GET', 'POST'])
@@ -280,14 +319,14 @@ def register_routes(app):
         if form.validate_on_submit():
             user = User.query.filter_by(username=form.username.data).first()
             if user:
-                flash('用户名已存在', 'error')
+                flash(t('flash.username_taken'), 'error')
             else:
                 new_user = User(username=form.username.data)
                 new_user.set_password(form.password.data)
                 db.session.add(new_user)
                 db.session.commit()
                 login_user(new_user)
-                flash('注册成功，欢迎！', 'success')
+                flash(t('flash.registered'), 'success')
                 return redirect(url_for('home'))
         return render_template('register.html', form=form)
 
@@ -314,21 +353,21 @@ def register_routes(app):
         if errors:
             for err in errors:
                 flash(err, 'error')
-            flash('设置未保存，请修正后重试。', 'error')
+            flash(t('flash.settings_not_saved'), 'error')
             return redirect(url_for('home'))
         for name, value in values.items():
             setattr(current_user, name, value)
         db.session.commit()
-        flash('设置已保存！', 'success')
+        flash(t('flash.settings_saved'), 'success')
         return redirect(url_for('home'))
 
     @app.route('/api/sessions', methods=['POST'])
     def record_session():
         if not current_user.is_authenticated:
-            return jsonify(ok=False, error='请先登录。'), 401
+            return jsonify(ok=False, error=t('err.login_required')), 401
         data = request.get_json(silent=True) if request.is_json else None
         if not isinstance(data, dict):
-            return jsonify(ok=False, error='请求格式错误。'), 400
+            return jsonify(ok=False, error=t('err.bad_request')), 400
 
         errors, values = [], {}
         for name in SETTING_FIELDS:
@@ -340,16 +379,16 @@ def register_routes(app):
             errors.append(err)
         pattern = data.get('pattern', 'custom')
         if pattern not in PATTERNS:
-            errors.append('未知的呼吸模式。')
+            errors.append(t('err.unknown_pattern'))
 
         server_today = datetime.now(timezone.utc).date()
         try:
             local_date = date.fromisoformat(str(data.get('local_date', '')))
         except ValueError:
             local_date = None
-            errors.append('日期格式错误。')
+            errors.append(t('err.bad_date'))
         if local_date and abs((local_date - server_today).days) > 1:
-            errors.append('日期不合理。')
+            errors.append(t('err.date_out_of_range'))
         if errors:
             return jsonify(ok=False, error=' '.join(errors)), 400
 
@@ -361,10 +400,10 @@ def register_routes(app):
         last = (PracticeSession.query.filter_by(user_id=current_user.id)
                 .order_by(PracticeSession.completed_at.desc()).first())
         if last and (now - last.completed_at).total_seconds() < duration - 2:
-            return jsonify(ok=False, error='记录过于频繁。'), 429
+            return jsonify(ok=False, error=t('err.too_fast')), 429
         today_count = PracticeSession.query.filter_by(user_id=current_user.id, local_date=local_date).count()
         if today_count >= MAX_SESSIONS_PER_DAY:
-            return jsonify(ok=False, error='今日记录次数已达上限。'), 429
+            return jsonify(ok=False, error=t('err.daily_limit')), 429
 
         db.session.add(PracticeSession(
             user_id=current_user.id, completed_at=now, local_date=local_date,
@@ -375,7 +414,7 @@ def register_routes(app):
     @app.route('/api/stats')
     def stats():
         if not current_user.is_authenticated:
-            return jsonify(ok=False, error='请先登录。'), 401
+            return jsonify(ok=False, error=t('err.login_required')), 401
         return jsonify(compute_stats(current_user.id))
 
     @app.route('/favicon.ico')

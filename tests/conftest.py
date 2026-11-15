@@ -49,12 +49,12 @@ def client(app):
     return app.test_client()
 
 
-def register(client, username='alice', password='secret123'):
-    return client.post('/register', data={'username': username, 'password': password})
+def register(client, username='alice', password='secret123', **kwargs):
+    return client.post('/register', data={'username': username, 'password': password}, **kwargs)
 
 
-def login(client, username='alice', password='secret123'):
-    return client.post('/login', data={'username': username, 'password': password})
+def login(client, username='alice', password='secret123', **kwargs):
+    return client.post('/login', data={'username': username, 'password': password}, **kwargs)
 
 
 @pytest.fixture

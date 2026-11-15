@@ -1,5 +1,5 @@
 {% extends 'auth_base.html' %}
 {% set autocomplete_password = 'current-password' %}
-{% block title %}登录{% endblock %}
-{% block heading %}登录{% endblock %}
-{% block links %}还没有账号？<a href="{{ url_for('register') }}">注册</a>{% endblock %}
+{% block title %}{{ t('auth.login') }}{% endblock %}
+{% block heading %}{{ t('auth.login') }}{% endblock %}
+{% block links %}{{ t('auth.no_account') }}<a href="{{ url_for('register') }}">{{ t('auth.register') }}</a>{% endblock %}

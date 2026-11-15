@@ -1,5 +1,5 @@
 {% extends 'auth_base.html' %}
 {% set autocomplete_password = 'new-password' %}
-{% block title %}注册{% endblock %}
-{% block heading %}注册{% endblock %}
-{% block links %}已有账号？<a href="{{ url_for('login') }}">登录</a>{% endblock %}
+{% block title %}{{ t('auth.register') }}{% endblock %}
+{% block heading %}{{ t('auth.register') }}{% endblock %}
+{% block links %}{{ t('auth.have_account') }}<a href="{{ url_for('login') }}">{{ t('auth.login') }}</a>{% endblock %}

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ html_lang }}">
 <head>
 {% include '_head.html' %}
-<title>呼吸训练小游戏</title>
+<title>{{ t('site.name') }}</title>
 
 <style>
 * { box-sizing: border-box; }
@@ -105,11 +105,12 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
 
 <body>
 <main>
-<h1>🌿 呼吸训练小游戏</h1>
+{% include '_lang_switch.html' %}
+<h1>🌿 {{ t('site.name') }}</h1>
 {% if current_user.is_authenticated %}
-<p class="user-bar">欢迎，{{ current_user.username }}！ <a href="{{ url_for('logout') }}">登出</a></p>
+<p class="user-bar">{{ t('home.welcome', name=current_user.username) }} <a href="{{ url_for('logout') }}">{{ t('auth.logout') }}</a></p>
 {% else %}
-<p class="user-bar"><a href="{{ url_for('login') }}">登录</a> | <a href="{{ url_for('register') }}">注册</a> <span class="hint">（登录后可保存设置、记录练习）</span></p>
+<p class="user-bar"><a href="{{ url_for('login') }}">{{ t('auth.login') }}</a> | <a href="{{ url_for('register') }}">{{ t('auth.register') }}</a> <span class="hint">{{ t('home.login_hint') }}</span></p>
 {% endif %}
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -121,45 +122,45 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
 {% endwith %}
 
 {% if stats %}
-<section class="card stats" aria-label="练习统计">
-  <div class="stat"><b id="statSessions">{{ stats.sessions }}</b><span>完成次数</span></div>
-  <div class="stat"><b id="statMinutes">{{ stats.minutes }}</b><span>累计分钟</span></div>
-  <div class="stat"><b id="statStreak">{{ stats.streak }}</b><span>连续天数</span></div>
+<section class="card stats" aria-label="{{ t('home.stats_label') }}">
+  <div class="stat"><b id="statSessions">{{ stats.sessions }}</b><span>{{ t('home.stat_sessions') }}</span></div>
+  <div class="stat"><b id="statMinutes">{{ stats.minutes }}</b><span>{{ t('home.stat_minutes') }}</span></div>
+  <div class="stat"><b id="statStreak">{{ stats.streak }}</b><span>{{ t('home.stat_streak') }}</span></div>
 </section>
 {% endif %}
 
-<section aria-label="练习">
+<section aria-label="{{ t('home.practice_label') }}">
   <div class="stage">
     <div class="circle" id="circle">
-      <div class="phase" id="guideText" aria-live="polite">准备</div>
+      <div class="phase" id="guideText" aria-live="polite">{{ t('js.phase_ready') }}</div>
       <div class="count" id="countText"></div>
     </div>
   </div>
-  <div class="status-line" id="statusLine">选择模式后点击“开始”</div>
-  <div class="progressBar" title="当前阶段进度"><div class="progressBarFill" id="progressFill"></div></div>
-  <div class="progressBar total" title="总进度"><div class="progressBarFill" id="totalFill"></div></div>
+  <div class="status-line" id="statusLine">{{ t('js.status_initial') }}</div>
+  <div class="progressBar" title="{{ t('home.phase_progress') }}"><div class="progressBarFill" id="progressFill"></div></div>
+  <div class="progressBar total" title="{{ t('home.total_progress') }}"><div class="progressBarFill" id="totalFill"></div></div>
   <div class="controls">
-    <button type="button" id="startBtn">▶ 开始</button>
-    <button type="button" id="pauseBtn" class="secondary" hidden>⏸ 暂停</button>
-    <button type="button" id="stopBtn" class="danger" hidden>■ 停止</button>
+    <button type="button" id="startBtn">{{ t('js.btn_start') }}</button>
+    <button type="button" id="pauseBtn" class="secondary" hidden>{{ t('js.btn_pause') }}</button>
+    <button type="button" id="stopBtn" class="danger" hidden>{{ t('js.btn_stop') }}</button>
   </div>
   <p class="done-msg" id="doneMsg" aria-live="polite"></p>
 </section>
 
 <form id="settingsForm" class="card" method="POST" action="{{ url_for('save_settings') }}" novalidate>
   <fieldset id="settingsFieldset">
-    <div class="presets" role="radiogroup" aria-label="呼吸模式">
-      <label class="chip"><input type="radio" name="pattern" value="relax">放松 4-2-6-2</label>
-      <label class="chip"><input type="radio" name="pattern" value="478">4-7-8 助眠</label>
-      <label class="chip"><input type="radio" name="pattern" value="box">方块 4-4-4-4</label>
-      <label class="chip"><input type="radio" name="pattern" value="coherent">平衡 5-5</label>
-      <label class="chip"><input type="radio" name="pattern" value="custom">自定义</label>
+    <div class="presets" role="radiogroup" aria-label="{{ t('home.patterns_label') }}">
+      <label class="chip"><input type="radio" name="pattern" value="relax">{{ t('home.preset_relax') }}</label>
+      <label class="chip"><input type="radio" name="pattern" value="478">{{ t('home.preset_478') }}</label>
+      <label class="chip"><input type="radio" name="pattern" value="box">{{ t('home.preset_box') }}</label>
+      <label class="chip"><input type="radio" name="pattern" value="coherent">{{ t('home.preset_coherent') }}</label>
+      <label class="chip"><input type="radio" name="pattern" value="custom">{{ t('home.preset_custom') }}</label>
     </div>
     <p class="preset-desc" id="presetDesc"></p>
     <div class="fields">
       {% for name in ['inhale', 'hold1', 'exhale', 'hold2', 'rounds'] %}
       {% set lim = limits[name] %}
-      <label>{{ lim.label }}{% if name != 'rounds' %}（秒）{% endif %}
+      <label>{{ lim.label }}{% if name != 'rounds' %}{{ t('field.seconds_suffix') }}{% endif %}
         <span class="input-wrap">
           <input id="{{ name }}" name="{{ name }}" type="number"
                  inputmode="{{ 'numeric' if name == 'rounds' else 'decimal' }}"
@@ -171,28 +172,28 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     </div>
     <p class="form-error" id="formError" role="alert"></p>
     <div class="options">
-      <label><input type="checkbox" id="soundOpt"> 🔔 声音提示</label>
-      <label><input type="checkbox" id="vibrateOpt"> 📳 振动提示</label>
+      <label><input type="checkbox" id="soundOpt"> {{ t('home.sound') }}</label>
+      <label><input type="checkbox" id="vibrateOpt"> {{ t('home.vibrate') }}</label>
     </div>
     {% if current_user.is_authenticated %}
-    <div class="controls"><button type="submit" id="saveBtn" class="secondary">保存设置</button></div>
+    <div class="controls"><button type="submit" id="saveBtn" class="secondary">{{ t('home.save') }}</button></div>
     {% endif %}
   </fieldset>
 </form>
 
 <details class="breathing-info card">
-  <summary>🌿 点击展开 / 隐藏呼吸训练原理</summary>
+  <summary>{{ t('info.summary') }}</summary>
   <div class="content">
-    <h2>呼吸训练的原理</h2>
-    <p><strong>延长呼气能快速让身体进入放松模式。</strong> 呼气时副交感神经占主导，可降低心率和紧张感。</p>
-    <p><strong>为什么要屏息？</strong></p>
+    <h2>{{ t('info.title') }}</h2>
+    <p>{{ t('info.p1_html') }}</p>
+    <p>{{ t('info.why_hold_html') }}</p>
     <ul>
-      <li><strong>吸气后的屏息</strong>让呼气的放松效果更强。</li>
-      <li><strong>呼气后的屏息</strong>让副交感神经更稳定。</li>
+      <li>{{ t('info.hold1_html') }}</li>
+      <li>{{ t('info.hold2_html') }}</li>
     </ul>
-    <p><strong>呼吸对身体的影响：</strong> 深呼吸能让神经系统从“紧张应激”转向“恢复修复”。</p>
-    <p><em>每一次延长呼气，都在让你的身体变得更平静。</em></p>
-    <p class="hint">如练习中感到头晕或不适，请停止并恢复自然呼吸。</p>
+    <p>{{ t('info.effect_html') }}</p>
+    <p>{{ t('info.closing_html') }}</p>
+    <p class="hint">{{ t('info.safety') }}</p>
   </div>
 </details>
 </main>
@@ -204,13 +205,16 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
   const SAVED = {{ settings|tojson }};
   const LOGGED_IN = {{ current_user.is_authenticated|tojson }};
   const RECORD_URL = {{ url_for('record_session')|tojson }};
+  const MSG = {{ js_messages|tojson }};
+  // Fill "{name}" placeholders in a translated string.
+  const fmtMsg = (tpl, vars) => tpl.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
   const FIELDS = ["inhale", "hold1", "exhale", "hold2"];
   const PRESETS = {
-    relax:    { inhale: 4, hold1: 2, exhale: 6, hold2: 2, desc: "延长呼气，适合日常放松减压。" },
-    "478":    { inhale: 4, hold1: 7, exhale: 8, hold2: 0, desc: "吸 4 秒、屏 7 秒、呼 8 秒，常用于睡前助眠。" },
-    box:      { inhale: 4, hold1: 4, exhale: 4, hold2: 4, desc: "四段等长，帮助集中注意力、稳定情绪。" },
-    coherent: { inhale: 5, hold1: 0, exhale: 5, hold2: 0, desc: "每分钟约 6 次的平稳呼吸，平衡身心。" },
-    custom:   { desc: "自由设置每个阶段的时长。" }
+    relax:    { inhale: 4, hold1: 2, exhale: 6, hold2: 2, desc: MSG.preset_relax },
+    "478":    { inhale: 4, hold1: 7, exhale: 8, hold2: 0, desc: MSG.preset_478 },
+    box:      { inhale: 4, hold1: 4, exhale: 4, hold2: 4, desc: MSG.preset_box },
+    coherent: { inhale: 5, hold1: 0, exhale: 5, hold2: 0, desc: MSG.preset_coherent },
+    custom:   { desc: MSG.preset_custom }
   };
   const SMALL = 0.65, BIG = 1.25;
 
@@ -262,16 +266,17 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     const values = {}, errors = [];
     FIELDS.concat(["rounds"]).forEach((f) => {
       const lim = LIMITS[f], raw = $(f).value.trim(), v = Number(raw);
+      const vars = { label: lim.label, min: lim.min, max: lim.max };
       let err = null;
-      if (raw === "") err = lim.label + "不能为空";
-      else if (!Number.isFinite(v)) err = lim.label + "必须是数字";
-      else if (v < 0) err = lim.label + "不能为负数";
-      else if (v < lim.min || v > lim.max) err = lim.label + "需在 " + lim.min + "–" + lim.max + " 之间";
-      else if (f === "rounds" && !Number.isInteger(v)) err = "轮数必须是整数";
+      if (raw === "") err = fmtMsg(MSG.err_empty, vars);
+      else if (!Number.isFinite(v)) err = fmtMsg(MSG.err_nan, vars);
+      else if (v < 0) err = fmtMsg(MSG.err_negative, vars);
+      else if (v < lim.min || v > lim.max) err = fmtMsg(MSG.err_range, vars);
+      else if (f === "rounds" && !Number.isInteger(v)) err = MSG.err_rounds_int;
       if (err) { errors.push(err); $(f).setAttribute("aria-invalid", "true"); }
       values[f] = v;
     });
-    if (errors.length) { formError.textContent = errors.join("；"); return null; }
+    if (errors.length) { formError.textContent = errors.join(MSG.err_sep); return null; }
     return values;
   }
 
@@ -333,17 +338,17 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
 
   function buildSteps(v) {
     return [
-      { label: "吸气", time: v.inhale, from: SMALL, to: BIG, freq: 523 },
-      { label: "屏息", time: v.hold1, from: BIG, to: BIG, freq: 440 },
-      { label: "呼气", time: v.exhale, from: BIG, to: SMALL, freq: 392 },
-      { label: "屏息", time: v.hold2, from: SMALL, to: SMALL, freq: 440 }
+      { label: MSG.phase_inhale, time: v.inhale, from: SMALL, to: BIG, freq: 523 },
+      { label: MSG.phase_hold, time: v.hold1, from: BIG, to: BIG, freq: 440 },
+      { label: MSG.phase_exhale, time: v.exhale, from: BIG, to: SMALL, freq: 392 },
+      { label: MSG.phase_hold, time: v.hold2, from: SMALL, to: SMALL, freq: 440 }
     ].filter((s) => s.time > 0);
   }
 
   function setButtons() {
     startBtn.hidden = state !== "idle";
     pauseBtn.hidden = stopBtn.hidden = state === "idle";
-    pauseBtn.textContent = state === "paused" ? "▶ 继续" : "⏸ 暂停";
+    pauseBtn.textContent = state === "paused" ? MSG.btn_resume : MSG.btn_pause;
     fieldset.disabled = state !== "idle";
   }
 
@@ -394,7 +399,8 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     progressFill.style.width = (p * 100).toFixed(1) + "%";
     const elapsed = session.doneBefore + t;
     totalFill.style.width = (elapsed / session.total * 100).toFixed(1) + "%";
-    statusLine.textContent = "第 " + session.round + " / " + session.values.rounds + " 轮 · 剩余 " + fmt(session.total - elapsed);
+    statusLine.textContent = fmtMsg(MSG.status_running,
+      { round: session.round, rounds: session.values.rounds, left: fmt(session.total - elapsed) });
     rafId = requestAnimationFrame(tick);
   }
 
@@ -403,7 +409,7 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
       state = "paused";
       cancelAnimationFrame(rafId);
       session.pausedAt = performance.now();
-      guide.textContent = "已暂停";
+      guide.textContent = MSG.phase_paused;
     } else if (state === "paused") {
       state = "running";
       session.phaseStart += performance.now() - session.pausedAt;
@@ -426,18 +432,19 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
 
   function stop() {
     if (state === "idle") return;
-    reset("准备", "已停止，本次未完成不计入记录");
+    reset(MSG.phase_ready, MSG.status_stopped);
     totalFill.style.width = "0%";
     session = null;
   }
 
   function finish() {
     const s = session;
-    reset("完成", "完成 " + s.values.rounds + " 轮，用时 " + fmt(s.total));
+    const finished = s.values.rounds === 1 ? MSG.status_finished_one : MSG.status_finished_other;
+    reset(MSG.phase_done, fmtMsg(finished, { rounds: s.values.rounds, time: fmt(s.total) }));
     totalFill.style.width = "100%";
     cue(660);
-    doneMsg.textContent = "🎉 太棒了！本次练习已完成。";
-    if (!LOGGED_IN) { doneMsg.textContent += " 登录后可记录练习并查看统计。"; return; }
+    doneMsg.textContent = MSG.done;
+    if (!LOGGED_IN) { doneMsg.textContent += MSG.done_login_hint; return; }
     record(s);
   }
 
@@ -456,18 +463,18 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     }).then((r) => r.json().then((data) => ({ ok: r.ok, data: data })))
       .then((res) => {
         if (res.ok && res.data.ok) {
-          doneMsg.textContent += " 已记录 ✔";
+          doneMsg.textContent += MSG.recorded;
           $("statSessions").textContent = res.data.stats.sessions;
           $("statMinutes").textContent = res.data.stats.minutes;
           $("statStreak").textContent = res.data.stats.streak;
         } else {
           doneMsg.className = "done-msg error";
-          doneMsg.textContent += " 记录失败：" + (res.data.error || "未知错误");
+          doneMsg.textContent += fmtMsg(MSG.record_failed, { error: res.data.error || MSG.unknown_error });
         }
       })
       .catch(() => {
         doneMsg.className = "done-msg error";
-        doneMsg.textContent += " 记录失败：网络错误，请稍后重试。";
+        doneMsg.textContent += fmtMsg(MSG.record_failed, { error: MSG.network_error });
       });
   }
 
