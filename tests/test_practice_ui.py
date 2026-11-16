@@ -49,7 +49,7 @@ def test_no_status_line_or_total_progress(home_html):
 def test_practice_controls_and_options_kept(home_html):
     for html in home_html.values():
         for el in ('id="circle"', 'id="guideText"', 'id="startBtn"',
-                   'id="pauseBtn" hidden', 'id="stopBtn" hidden', 'id="soundOpt"',
+                   'id="stopBtn" hidden', 'id="soundOpt"',
                    'id="vibrateOpt"', 'id="presetSelect"', 'class="lang-switch"'):
             assert el in html, el
         # The phase text is empty when idle.
@@ -76,16 +76,35 @@ def test_engine_loops_and_records_completed_cycles_on_stop(home_html):
     assert '"rounds"' not in html
 
 
-def test_pause_and_stop_take_the_start_and_save_spot(home_html):
+def test_only_stop_takes_the_start_and_save_spot(home_html):
     for html in home_html.values():
         form = html[html.index('<form id="settingsForm"'):html.index('</form>')]
-        for btn in ('id="startBtn"', 'id="pauseBtn"', 'id="stopBtn"'):
+        for btn in ('id="startBtn"', 'id="stopBtn"'):
             assert btn in form
+        assert form.count('<button') == form.count('id="startBtn"') + form.count('id="saveBtn"') + 1
         script = html[html.index('<script>'):]
         assert 'startBtn.hidden = !idle;' in script and 'if (saveBtn) saveBtn.hidden = !idle;' in script
-        assert 'pauseBtn.hidden = stopBtn.hidden = idle;' in script
+        assert 'stopBtn.hidden = idle;' in script
+        assert 'stopBtn.addEventListener("click", stop);' in script
         # Same plain green style for every button: no secondary/danger variants.
         assert 'class="secondary"' not in html and 'class="danger"' not in html
+    assert '<button type="button" id="stopBtn" hidden>停止</button>' in home_html['zh']
+    assert '<button type="button" id="stopBtn" hidden>Stop</button>' in home_html['en']
+
+
+def test_no_pause_or_resume_remains(home_html):
+    for lang, html in home_html.items():
+        assert 'pauseBtn' not in html and 'togglePause' not in html and 'pausedAt' not in html
+        assert '"paused"' not in html and 'keydown' not in html
+        msg = embedded_json(html, 'MSG')
+        for key in ('btn_pause', 'btn_resume', 'phase_paused'):
+            assert key not in msg
+    for word in ('暂停', '已暂停', '继续'):
+        assert word not in home_html['zh']
+    for word in ('Pause', 'Resume', 'Paused'):
+        assert word not in home_html['en']
+    for key in ('js.btn_pause', 'js.btn_resume', 'js.phase_paused'):
+        assert key not in i18n.MESSAGES
 
 
 def test_removed_js_messages_are_gone(home_html):

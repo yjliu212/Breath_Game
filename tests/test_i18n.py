@@ -90,7 +90,7 @@ def test_english_home_has_no_leftover_chinese(client):
     assert 'How breathing practice works' in html
     assert '<strong>Why hold your breath?</strong>' in html      # _html keys keep their markup
     msg = embedded_json(html, 'MSG')
-    assert msg['phase_inhale'] == 'Inhale' and msg['btn_resume'] == 'Resume'
+    assert msg['phase_inhale'] == 'Inhale' and msg['phase_exhale'] == 'Exhale'
     limits = embedded_json(html, 'LIMITS')
     assert limits['hold2']['label'] == 'Hold after exhale' and 'rounds' not in limits
     leftover = CJK.findall(strip_allowed(html))

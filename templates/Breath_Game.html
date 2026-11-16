@@ -164,7 +164,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   {% if current_user.is_authenticated %}
   <button type="submit" id="saveBtn">{{ t('home.save') }}</button>
   {% endif %}
-  <button type="button" id="pauseBtn" hidden>{{ t('js.btn_pause') }}</button>
   <button type="button" id="stopBtn" hidden>{{ t('home.stop') }}</button>
 </form>
 <p class="error-line" id="recordError" role="alert"></p>
@@ -220,7 +219,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 
   const $ = (id) => document.getElementById(id);
   const circle = $("circle"), guide = $("guideText"), progressFill = $("progressFill");
-  const startBtn = $("startBtn"), saveBtn = $("saveBtn"), pauseBtn = $("pauseBtn"), stopBtn = $("stopBtn");
+  const startBtn = $("startBtn"), saveBtn = $("saveBtn"), stopBtn = $("stopBtn");
   const formError = $("formError"), recordError = $("recordError"), fieldset = $("settingsFieldset");
   const presetSelect = $("presetSelect");
   const soundOpt = $("soundOpt"), vibrateOpt = $("vibrateOpt");
@@ -316,7 +315,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   }
 
   // ---------- practice engine ----------
-  let state = "idle";      // idle | running | paused
+  let state = "idle";      // idle | running
   let session = null, rafId = null;
 
   function ease(p) { return 0.5 - Math.cos(Math.PI * p) / 2; }
@@ -331,13 +330,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
     ].filter((s) => s.time > 0);
   }
 
-  // Idle: start (+ save); practising: pause + stop in the same spot.
+  // Idle: start (+ save); practising: only stop, in the same spot.
   function setButtons() {
     const idle = state === "idle";
     startBtn.hidden = !idle;
     if (saveBtn) saveBtn.hidden = !idle;
-    pauseBtn.hidden = stopBtn.hidden = idle;
-    pauseBtn.textContent = state === "paused" ? MSG.btn_resume : MSG.btn_pause;
+    stopBtn.hidden = idle;
     fieldset.disabled = !idle;
   }
 
@@ -348,7 +346,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
     // Loops until Stop; `cycles` counts fully completed inhale-hold-exhale-hold cycles.
     session = {
       values: v, pattern: presetSelect.value, steps: buildSteps(v), cycles: 0, idx: 0,
-      phaseStart: performance.now(), pausedAt: 0
+      phaseStart: performance.now()
     };
     recordError.textContent = "";
     state = "running";
@@ -394,25 +392,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
     rafId = requestAnimationFrame(tick);
   }
 
-  function togglePause() {
-    if (state === "running") {
-      state = "paused";
-      cancelAnimationFrame(rafId);
-      session.pausedAt = performance.now();
-      guide.textContent = MSG.phase_paused;
-    } else if (state === "paused") {
-      state = "running";
-      session.phaseStart += performance.now() - session.pausedAt;
-      guide.textContent = session.steps[session.idx].label;
-      rafId = requestAnimationFrame(tick);
-    }
-    setButtons();
-  }
-
   function stop() {
     if (state === "idle") return;
-    // Count cycles finished right up to the moment of stopping (or pausing).
-    advance(state === "paused" ? session.pausedAt : performance.now(), false);
+    // Count cycles finished right up to the moment of stopping.
+    advance(performance.now(), false);
     const s = session;
     cancelAnimationFrame(rafId);
     session = null;
@@ -448,7 +431,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   }
 
   startBtn.addEventListener("click", start);
-  pauseBtn.addEventListener("click", togglePause);
   stopBtn.addEventListener("click", stop);
   setButtons();
 })();
