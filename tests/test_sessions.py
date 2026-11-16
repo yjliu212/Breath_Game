@@ -26,7 +26,7 @@ def test_record_valid_session_updates_stats(app, auth_client):
     assert data['stats'] == {'sessions': 1, 'minutes': 0.6, 'streak': 1}
     assert auth_client.get('/api/stats').get_json() == data['stats']
     html = auth_client.get('/').get_data(as_text=True)
-    assert 'id="statSessions">1<' in html
+    assert '>你已经在这里静下来 1 次，共 0.6 分钟。</p>' in html
     with app.app_context():
         row = app_module.PracticeSession.query.one()
         assert (row.pattern, row.rounds, row.local_date) == ('478', 2, TODAY)

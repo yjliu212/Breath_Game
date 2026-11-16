@@ -100,9 +100,9 @@ def test_english_home_has_no_leftover_chinese(client):
 def test_english_logged_in_home_has_no_leftover_chinese(client):
     register(client, headers=EN)
     html = client.get('/', headers=EN).get_data(as_text=True)
-    assert 'Welcome, alice!' in html and 'Log out' in html
+    assert 'Hello, alice' in html and 'Log out' in html
     assert 'Registration successful — welcome!' in html
-    assert 'Sessions' in html and 'Total minutes' in html and 'Day streak' in html
+    assert 'id="calmLine"' in html and 'Good evening, {name}' in html   # warm strings are English too
     assert 'Save settings' in html
     leftover = CJK.findall(strip_allowed(html))
     assert not leftover, ''.join(leftover)
@@ -178,7 +178,7 @@ def test_switch_control_on_every_page(client, path, headers, current):
 def test_switch_control_keeps_logged_in_session(client):
     register(client)
     client.get('/lang/en?next=/')
-    assert 'Welcome, alice!' in client.get('/').get_data(as_text=True)
+    assert 'Hello, alice' in client.get('/').get_data(as_text=True)
 
 
 # ---------------------------------------------------------------- auth pages

@@ -28,9 +28,18 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
 
 .card { background: #1e293b; border-radius: 12px; padding: 14px; margin: 12px 0; }
 
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.stat b { display: block; font-size: 24px; color: #4ade80; }
-.stat span { font-size: 13px; color: #94a3b8; }
+/* Logged-in welcome: greeting, calm line, quiet stats sentence, "together" line */
+.welcome { margin: 0 0 14px; }
+.welcome .greeting { margin: 0 0 6px; font-size: 18px; color: #e2e8f0; }
+.welcome .greeting a { font-size: 14px; margin-left: 8px; }
+.quiet { margin: 2px 0; font-size: 14px; line-height: 1.6; color: #94a3b8; }
+
+/* Gentle line after a recorded session */
+.afterglow { margin: 6px 0 0; color: #cbd5e1; font-size: 15px; line-height: 1.6;
+             opacity: 0; transition: opacity 1.5s ease; }
+.afterglow.show { opacity: 1; }
+.afterglow p { margin: 0; }
+.afterglow .quiet { margin-top: 2px; }
 
 /* Practice stage */
 .stage { position: relative; height: 250px; display: flex; align-items: center; justify-content: center; }
@@ -95,6 +104,7 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
 }
 @media (prefers-reduced-motion: reduce) {
   .circle { box-shadow: none; }
+  .afterglow { transition: none; }
 }
 </style>
 </head>
@@ -104,7 +114,14 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
 {% include '_lang_switch.html' %}
 <h1>🌿 {{ t('site.name') }}</h1>
 {% if current_user.is_authenticated %}
-<p class="user-bar">{{ t('home.welcome', name=current_user.username) }} <a href="{{ url_for('logout') }}">{{ t('auth.logout') }}</a></p>
+<section class="welcome" id="welcome">
+  <p class="greeting"><span id="greeting" data-name="{{ current_user.username }}">{{ t('warm.greet_default', name=current_user.username) }}</span><a href="{{ url_for('logout') }}">{{ t('auth.logout') }}</a></p>
+  <p class="quiet" id="calmLine">{{ t(warm.calm_key) }}</p>
+  <p class="quiet" id="statsLine"{% if not stats.sessions %} hidden>{% else %}>{{ t(warm.stats_key, sessions=stats.sessions, minutes=warm.minutes) }}{% endif %}</p>
+  {% if warm.together %}
+  <p class="quiet" id="together">{{ t('warm.together', n=warm.together) }}</p>
+  {% endif %}
+</section>
 {% else %}
 <p class="user-bar"><a href="{{ url_for('login') }}">{{ t('auth.login') }}</a> | <a href="{{ url_for('register') }}">{{ t('auth.register') }}</a> <span class="hint">{{ t('home.login_hint') }}</span></p>
 {% endif %}
@@ -116,14 +133,6 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
   </ul>
   {% endif %}
 {% endwith %}
-
-{% if stats %}
-<section class="card stats" aria-label="{{ t('home.stats_label') }}">
-  <div class="stat"><b id="statSessions">{{ stats.sessions }}</b><span>{{ t('home.stat_sessions') }}</span></div>
-  <div class="stat"><b id="statMinutes">{{ stats.minutes }}</b><span>{{ t('home.stat_minutes') }}</span></div>
-  <div class="stat"><b id="statStreak">{{ stats.streak }}</b><span>{{ t('home.stat_streak') }}</span></div>
-</section>
-{% endif %}
 
 <section aria-label="{{ t('home.practice_label') }}">
   <div class="stage">
@@ -138,6 +147,9 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     <button type="button" id="stopBtn" class="danger" hidden>{{ t('js.btn_stop') }}</button>
   </div>
   <p class="done-msg" id="doneMsg" aria-live="polite"></p>
+  {% if current_user.is_authenticated %}
+  <div class="afterglow" id="afterglow" aria-live="polite"></div>
+  {% endif %}
 </section>
 
 <form id="settingsForm" class="card" method="POST" action="{{ url_for('save_settings') }}" novalidate>
@@ -198,6 +210,7 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
   const LOGGED_IN = {{ current_user.is_authenticated|tojson }};
   const RECORD_URL = {{ url_for('record_session')|tojson }};
   const MSG = {{ js_messages|tojson }};
+  const WARM = {{ warm_messages|tojson }};   // logged-in strings only; null for guests
   // Fill "{name}" placeholders in a translated string.
   const fmtMsg = (tpl, vars) => tpl.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
   const FIELDS = ["inhale", "hold1", "exhale", "hold2"];
@@ -217,6 +230,48 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
   const doneMsg = $("doneMsg"), formError = $("formError"), fieldset = $("settingsFieldset");
   const presetRadios = Array.from(document.querySelectorAll('input[name="pattern"]'));
   const soundOpt = $("soundOpt"), vibrateOpt = $("vibrateOpt");
+  const greetEl = $("greeting"), statsLine = $("statsLine"), afterglow = $("afterglow");
+
+  // ---------- warm welcome (logged in): greeting by the browser's local time ----------
+  if (WARM && greetEl) {
+    const h = new Date().getHours();
+    const tpl = h >= 5 && h < 12 ? WARM.greet_morning : h >= 12 && h < 18 ? WARM.greet_afternoon : WARM.greet_evening;
+    greetEl.textContent = fmtMsg(tpl, { name: greetEl.dataset.name });
+  }
+
+  function updateStatsLine(stats) {
+    if (!WARM || !statsLine || !(stats.sessions > 0)) return;
+    const tpl = stats.sessions === 1 ? WARM.stats_line_one : WARM.stats_line;
+    statsLine.textContent = fmtMsg(tpl, { sessions: stats.sessions, minutes: Number(stats.minutes) });
+    statsLine.hidden = false;
+  }
+
+  // A soft line after a recorded session; fades out after a while.
+  let glowTimer = null, glowClearTimer = null;
+  function clearAfterglow() {
+    if (!afterglow) return;
+    clearTimeout(glowTimer); clearTimeout(glowClearTimer);
+    afterglow.classList.remove("show");
+    afterglow.replaceChildren();
+  }
+  function showAfterglow(together) {
+    if (!WARM || !afterglow) return;
+    clearAfterglow();
+    const line = (text, cls) => {
+      const p = document.createElement("p");
+      if (cls) p.className = cls;
+      p.textContent = text;
+      afterglow.appendChild(p);
+    };
+    line(WARM.thanks);
+    const others = (Number(together) || 0) - 1;   // everyone else, not counting you
+    if (others >= 1) line(fmtMsg(others === 1 ? WARM.not_alone_one : WARM.not_alone, { n: others }), "quiet");
+    requestAnimationFrame(() => afterglow.classList.add("show"));
+    glowTimer = setTimeout(() => {
+      afterglow.classList.remove("show");
+      glowClearTimer = setTimeout(() => afterglow.replaceChildren(), 1600);
+    }, 8000);
+  }
 
   // ---------- settings & presets ----------
   function setPattern(key) {
@@ -350,6 +405,7 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
       phaseStart: performance.now(), pausedAt: 0
     };
     doneMsg.textContent = ""; doneMsg.className = "done-msg";
+    clearAfterglow();
     state = "running";
     setButtons();
     enterPhase();
@@ -443,9 +499,8 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
       .then((res) => {
         if (res.ok && res.data.ok) {
           doneMsg.textContent += MSG.recorded;
-          $("statSessions").textContent = res.data.stats.sessions;
-          $("statMinutes").textContent = res.data.stats.minutes;
-          $("statStreak").textContent = res.data.stats.streak;
+          updateStatsLine(res.data.stats);
+          showAfterglow(res.data.together);
         } else {
           doneMsg.className = "done-msg error";
           doneMsg.textContent += fmtMsg(MSG.record_failed, { error: res.data.error || MSG.unknown_error });

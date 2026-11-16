@@ -98,13 +98,34 @@ MESSAGES = {
                        'en': '← Back to home (you can practice without an account)'},
 
     # ------------------------------------------------------------ home / game page
-    'home.welcome': {'zh': '欢迎，{name}！', 'en': 'Welcome, {name}!'},
     'home.login_hint': {'zh': '（登录后可保存设置、记录练习）',
                         'en': '(log in to save settings and track your practice)'},
-    'home.stats_label': {'zh': '练习统计', 'en': 'Practice stats'},
-    'home.stat_sessions': {'zh': '完成次数', 'en': 'Sessions'},
-    'home.stat_minutes': {'zh': '累计分钟', 'en': 'Total minutes'},
-    'home.stat_streak': {'zh': '连续天数', 'en': 'Day streak'},
+
+    # ------------------------------------------------------------ logged-in welcome (warm.*)
+    # Shown to logged-in users only. Keys listed in WARM_JS_KEYS are also sent to
+    # the browser, but only on logged-in pages (see ``warm_messages``).
+    'warm.greet_default': {'zh': '你好，{name}', 'en': 'Hello, {name}'},
+    'warm.greet_morning': {'zh': '早上好，{name}', 'en': 'Good morning, {name}'},
+    'warm.greet_afternoon': {'zh': '下午好，{name}', 'en': 'Good afternoon, {name}'},
+    'warm.greet_evening': {'zh': '晚上好，{name}', 'en': 'Good evening, {name}'},
+    'warm.calm_1': {'zh': '慢一点也没关系。', 'en': "There's no rush here."},
+    'warm.calm_2': {'zh': '今天也给自己留一点安静。', 'en': 'Leave a little quiet for yourself today.'},
+    'warm.calm_3': {'zh': '让呼吸带你回到此刻。', 'en': 'Let your breath bring you back to this moment.'},
+    'warm.calm_4': {'zh': '不必做得完美，在这里就好。', 'en': "You don't have to do it perfectly. Being here is enough."},
+    'warm.calm_5': {'zh': '放松肩膀，呼气可以再长一点。', 'en': 'Soften your shoulders, and let the exhale be a little longer.'},
+    'warm.calm_6': {'zh': '这几分钟，只属于你自己。', 'en': 'These few minutes are yours alone.'},
+    'warm.calm_7': {'zh': '累了就歇一歇，这里一直都在。', 'en': "Rest when you're tired. This place will still be here."},
+    'warm.stats_line': {'zh': '你已经在这里静下来 {sessions} 次，共 {minutes} 分钟。',
+                        'en': "You've paused here {sessions} times, {minutes} minutes in all."},
+    'warm.stats_line_one': {'zh': '你已经在这里静下来 {sessions} 次，共 {minutes} 分钟。',
+                            'en': "You've paused here {sessions} time, {minutes} minutes in all."},
+    'warm.together': {'zh': '今天有 {n} 位朋友在这里一起呼吸', 'en': '{n} people breathed here today'},
+    'warm.thanks': {'zh': '谢谢你给自己这一刻。', 'en': 'Thank you for taking this moment.'},
+    'warm.not_alone': {'zh': '此刻你并不孤单，今天有 {n} 位朋友也在这里。',
+                       'en': "You're not alone. {n} others breathed here today too."},
+    'warm.not_alone_one': {'zh': '此刻你并不孤单，今天有 {n} 位朋友也在这里。',
+                           'en': "You're not alone. {n} other person breathed here today too."},
+
     'home.practice_label': {'zh': '练习', 'en': 'Practice'},
     'home.phase_progress': {'zh': '当前阶段进度', 'en': 'Current phase progress'},
     'home.patterns_label': {'zh': '呼吸模式', 'en': 'Breathing pattern'},
@@ -215,6 +236,18 @@ def t(key, lang=None, **kwargs):
 def js_messages(lang=None):
     """All ``js.*`` strings for one language, keyed without the prefix."""
     return {key[3:]: t(key, lang) for key in MESSAGES if key.startswith('js.')}
+
+
+# warm.* strings the logged-in page needs in JavaScript (greeting by local time,
+# the stats sentence and the post-practice thank-you).
+WARM_JS_KEYS = ('greet_morning', 'greet_afternoon', 'greet_evening', 'stats_line', 'stats_line_one',
+                'thanks', 'not_alone', 'not_alone_one')
+CALM_KEYS = tuple(f'warm.calm_{i}' for i in range(1, 8))
+
+
+def warm_messages(lang=None):
+    """The ``warm.*`` strings used by JavaScript, keyed without the prefix."""
+    return {key: t('warm.' + key, lang) for key in WARM_JS_KEYS}
 
 
 class LazyText:

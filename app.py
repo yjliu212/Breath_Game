@@ -198,6 +198,41 @@ def compute_stats(user_id, today=None):
     }
 
 
+# The "breathing together" line is only shown when at least this many distinct
+# people practised in the window, so a lone user never sees "1 people".
+TOGETHER_MIN = 2
+TOGETHER_WINDOW = timedelta(hours=24)
+
+
+def count_recent_breathers(now=None):
+    """Number of distinct users with a session completed in the last 24 hours.
+
+    ``completed_at`` is stored as naive UTC; ``now`` may be naive UTC or aware.
+    Anonymous by design: only a count, never who.
+    """
+    if now is None:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+    elif now.tzinfo is not None:
+        now = now.astimezone(timezone.utc).replace(tzinfo=None)
+    count = (db.session.query(func.count(func.distinct(PracticeSession.user_id)))
+             .filter(PracticeSession.completed_at > now - TOGETHER_WINDOW,
+                     PracticeSession.completed_at <= now)
+             .scalar())
+    return int(count or 0)
+
+
+def calm_key(today=None):
+    """i18n key of the calm line for a (server UTC) date; stable for the whole day."""
+    if today is None:
+        today = datetime.now(timezone.utc).date()
+    return i18n.CALM_KEYS[today.toordinal() % len(i18n.CALM_KEYS)]
+
+
+def format_minutes(minutes):
+    """12.0 -> '12', 0.6 -> '0.6' (matches how the browser prints the JSON number)."""
+    return ('%.1f' % minutes).rstrip('0').rstrip('.')
+
+
 # ---------------------------------------------------------------------------
 # Forms
 # ---------------------------------------------------------------------------
@@ -326,13 +361,22 @@ def register_routes(app):
     def home():
         settings = None
         stats = None
+        warm = None
         if current_user.is_authenticated:
             settings = {name: safe_setting(name, getattr(current_user, name)) for name in SETTING_FIELDS}
             stats = compute_stats(current_user.id)
+            together = count_recent_breathers()
+            warm = {
+                'calm_key': calm_key(),
+                'minutes': format_minutes(stats['minutes']),
+                'stats_key': 'warm.stats_line_one' if stats['sessions'] == 1 else 'warm.stats_line',
+                'together': together if together >= TOGETHER_MIN else None,
+            }
         limits = {name: {'label': t(f[0]), 'min': f[1], 'max': f[2], 'default': f[3]}
                   for name, f in SETTING_FIELDS.items()}
         return render_template("Breath_Game.html", settings=settings, stats=stats, limits=limits,
-                               js_messages=i18n.js_messages())
+                               warm=warm, js_messages=i18n.js_messages(),
+                               warm_messages=i18n.warm_messages() if warm else None)
 
     @app.route('/login', methods=['GET', 'POST'])
     def login():
@@ -444,7 +488,8 @@ def register_routes(app):
             user_id=current_user.id, completed_at=now, local_date=local_date,
             duration_seconds=duration, pattern=pattern, **values))
         db.session.commit()
-        return jsonify(ok=True, duration_seconds=duration, stats=compute_stats(current_user.id)), 201
+        return jsonify(ok=True, duration_seconds=duration, stats=compute_stats(current_user.id),
+                       together=count_recent_breathers(now)), 201
 
     @app.route('/api/stats')
     def stats():
