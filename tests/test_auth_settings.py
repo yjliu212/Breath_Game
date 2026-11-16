@@ -23,9 +23,8 @@ def test_register_logs_in_and_shows_home(client):
     resp = register(client)
     assert resp.status_code == 302
     html = client.get('/').get_data(as_text=True)
-    assert '你好，alice' in html
+    assert 'Welcome, alice!' in html
     assert '注册成功' in html          # flash rendered on the home page
-    assert 'id="statsLine" hidden' in html     # no sessions yet -> quiet stats sentence hidden
 
 
 def test_register_duplicate_username(client):
@@ -50,7 +49,7 @@ def test_login_success_and_failure(client):
     assert '用户名或密码错误' in bad.get_data(as_text=True)
     good = login(client)
     assert good.status_code == 302
-    assert '你好，alice' in client.get('/').get_data(as_text=True)
+    assert 'Welcome, alice!' in client.get('/').get_data(as_text=True)
 
 
 def test_auth_pages_have_viewport_and_chinese(client):

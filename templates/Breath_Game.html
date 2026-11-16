@@ -5,187 +5,179 @@
 <title>{{ t('site.name') }}</title>
 
 <style>
-* { box-sizing: border-box; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
   background: #0f172a;
   color: #e2e8f0;
   text-align: center;
-  margin: 0;
-  padding: 16px;
-}
-main { max-width: 720px; margin: 0 auto; }
-h1 { margin: 8px 0 6px; font-size: clamp(24px, 6vw, 32px); }
-a { color: #4ade80; }
-.user-bar { margin: 0 0 12px; }
-button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visible, label.chip:focus-within {
-  outline: 3px solid #86efac; outline-offset: 2px;
+  padding: 20px;
 }
 
-.flash { list-style: none; padding: 0; margin: 0 auto 12px; text-align: left; }
-.flash li { padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; background: #1e3a2a; color: #bbf7d0; }
-.flash li.error { background: #450a0a; color: #fecaca; }
+h1 { margin-bottom: 10px; }
+a { color: #22c55e; }
 
-.card { background: #1e293b; border-radius: 12px; padding: 14px; margin: 12px 0; }
+/* Language switch: small muted text links in the top-right corner. */
+.lang-bar { position: absolute; top: 6px; right: 12px; margin: 0; max-width: none; }
+.lang-switch { border: none; border-radius: 0; font-size: 12px; }
+.lang-switch a { min-width: 0; min-height: 0; padding: 2px 6px; color: #64748b; }
+.lang-switch a + a { border-left: 1px solid #334155; }
+.lang-switch a:hover { background: none; color: #cbd5e1; }
+.lang-switch a[aria-current="true"] { background: none; color: #cbd5e1; font-weight: normal; }
 
-/* Logged-in welcome: greeting, calm line, quiet stats sentence, "together" line */
-.welcome { margin: 0 0 14px; }
-.welcome .greeting { margin: 0 0 6px; font-size: 18px; color: #e2e8f0; }
-.welcome .greeting a { font-size: 14px; margin-left: 8px; }
-.quiet { margin: 2px 0; font-size: 14px; line-height: 1.6; color: #94a3b8; }
+.flash { margin: 0 0 10px; font-size: 14px; color: #bbf7d0; }
+.flash.error { color: #fca5a5; }
 
-/* Gentle line after a recorded session */
-.afterglow { margin: 6px 0 0; color: #cbd5e1; font-size: 15px; line-height: 1.6;
-             opacity: 0; transition: opacity 1.5s ease; }
-.afterglow.show { opacity: 1; }
-.afterglow p { margin: 0; }
-.afterglow .quiet { margin-top: 2px; }
-
-/* Practice stage */
-.stage { position: relative; height: 250px; display: flex; align-items: center; justify-content: center; }
-.circle {
-  width: 170px; height: 170px; border-radius: 50%;
-  background: radial-gradient(circle, #22c55e, #14532d);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  transform: scale(0.75);
-  will-change: transform;
-  box-shadow: 0 0 40px rgba(34, 197, 94, 0.25);
+.settings {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 20px;
+  padding: 0;
+  border: none;
+  min-width: 0;
 }
-.circle .phase { font-size: 24px; font-weight: 600; color: #f0fdf4; }
-.progressBar { width: 100%; height: 10px; background: #334155; border-radius: 5px; margin: 10px auto; overflow: hidden; }
-.progressBarFill { height: 100%; width: 0%; background: #22c55e; }
+.settings label { display: inline-flex; align-items: center; gap: 10px; }
 
-.controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 6px 0; }
+.settings input, .settings select {
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  background: #1e293b;
+  color: #e2e8f0;
+}
+.settings input { width: 70px; }
+.settings input[aria-invalid="true"] { border-color: #f87171; }
+
+.error-line { margin: -10px 0 0; font-size: 14px; color: #fca5a5; }
+.error-line:empty { display: none; }
+#recordError { margin-top: 10px; }
+
 button {
-  background: #22c55e; color: #052e16; border: none;
-  min-height: 48px; padding: 10px 22px; border-radius: 10px;
-  cursor: pointer; font-size: 17px; font-weight: 600;
+  background: #22c55e;
+  color: #052e16;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 10px;
 }
-button.secondary { background: #334155; color: #e2e8f0; }
-button.danger { background: #f87171; color: #450a0a; }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
-.done-msg { min-height: 24px; color: #bbf7d0; margin: 8px 0 0; }
-.done-msg.error { color: #fecaca; }
+button[hidden] { display: none; }
 
-/* Settings */
-fieldset { border: none; padding: 0; margin: 0; min-width: 0; }
-.presets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 12px; }
-label.chip {
-  display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px;
-  border-radius: 999px; border: 1px solid #475569; cursor: pointer; font-size: 15px;
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible {
+  outline: 3px solid #86efac;
+  outline-offset: 2px;
 }
-label.chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-color: #22c55e; }
-.preset-desc { color: #94a3b8; font-size: 14px; min-height: 20px; margin: 0 0 10px; }
-.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; text-align: left; }
-.fields label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: #cbd5e1; }
-.fields .input-wrap { display: flex; align-items: center; gap: 6px; }
-.fields input {
-  width: 100%; min-height: 44px; padding: 8px 10px; font-size: 17px;
-  border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #e2e8f0;
+
+.circle {
+  width: 160px;
+  height: 160px;
+  margin: 30px auto;
+  border-radius: 50%;
+  background: radial-gradient(circle, #22c55e, #14532d);
+  will-change: transform;
 }
-.fields input[aria-invalid="true"] { border-color: #f87171; }
-.form-error { color: #fecaca; min-height: 20px; margin: 8px 0 0; text-align: left; }
-.options { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
-.options label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; }
+
+#guideText {
+  font-size: 24px;
+  margin-top: 10px;
+  min-height: 30px;
+}
+
+.progressBar {
+  width: 80%;
+  height: 10px;
+  background: #334155;
+  border-radius: 5px;
+  margin: 15px auto;
+  overflow: hidden;
+}
+.progressBarFill {
+  height: 100%;
+  width: 0%;
+  background: #22c55e;
+}
+
+.breathing-info {
+  margin-top: 20px;
+  padding: 12px;
+  background: #1e293b;
+  border-radius: 10px;
+  color: #e2e8f0;
+}
+.breathing-info summary { font-size: 18px; cursor: pointer; }
+.breathing-info .content { margin-top: 10px; line-height: 1.6; }
+.breathing-info .muted { font-size: 13px; color: #94a3b8; }
+.options label { display: inline-flex; align-items: center; gap: 4px; margin: 0 8px; cursor: pointer; }
 .options label[hidden] { display: none; }
-.options input { width: 20px; height: 20px; }
-.hint { color: #94a3b8; font-size: 13px; }
-
-.breathing-info { text-align: left; line-height: 1.6; }
-.breathing-info summary { font-size: 17px; cursor: pointer; text-align: center; min-height: 32px; }
-.breathing-info .content { margin-top: 10px; }
 
 @media (max-width: 480px) {
-  body { padding: 12px; }
-  .stage { height: 220px; }
-  .circle { width: 150px; height: 150px; }
-  .controls button { flex: 1 1 40%; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .circle { box-shadow: none; }
-  .afterglow { transition: none; }
+  body { padding: 20px 12px; }
+  /* 16px stops iOS from zooming into the field on focus. */
+  .settings input, .settings select { font-size: 16px; }
 }
 </style>
 </head>
 
 <body>
-<main>
 {% include '_lang_switch.html' %}
+<main>
 <h1>🌿 {{ t('site.name') }}</h1>
 {% if current_user.is_authenticated %}
-<section class="welcome" id="welcome">
-  <p class="greeting"><span id="greeting" data-name="{{ current_user.username }}">{{ t('warm.greet_default', name=current_user.username) }}</span><a href="{{ url_for('logout') }}">{{ t('auth.logout') }}</a></p>
-  <p class="quiet" id="calmLine">{{ t(warm.calm_key) }}</p>
-  <p class="quiet" id="statsLine"{% if not stats.sessions %} hidden>{% else %}>{{ t(warm.stats_key, sessions=stats.sessions, minutes=warm.minutes) }}{% endif %}</p>
-  {% if warm.together %}
-  <p class="quiet" id="together">{{ t('warm.together', n=warm.together) }}</p>
-  {% endif %}
-</section>
+<p class="user-line">{{ t('home.welcome', name=current_user.username) }} <a href="{{ url_for('logout') }}">{{ t('auth.logout') }}</a></p>
 {% else %}
-<p class="user-bar"><a href="{{ url_for('login') }}">{{ t('auth.login') }}</a> | <a href="{{ url_for('register') }}">{{ t('auth.register') }}</a> <span class="hint">{{ t('home.login_hint') }}</span></p>
+<p class="user-line"><a href="{{ url_for('login') }}">{{ t('auth.login') }}</a> | <a href="{{ url_for('register') }}">{{ t('auth.register') }}</a></p>
 {% endif %}
 
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
-  <ul class="flash" role="status">
-    {% for category, message in messages %}<li class="{{ category }}">{{ message }}</li>{% endfor %}
-  </ul>
+  <div role="status">
+    {% for category, message in messages %}<p class="flash {{ category }}">{{ message }}</p>{% endfor %}
+  </div>
   {% endif %}
 {% endwith %}
 
-<section aria-label="{{ t('home.practice_label') }}">
-  <div class="stage">
-    <div class="circle" id="circle">
-      <div class="phase" id="guideText" aria-live="polite">{{ t('js.phase_ready') }}</div>
-    </div>
-  </div>
-  <div class="progressBar" title="{{ t('home.phase_progress') }}"><div class="progressBarFill" id="progressFill"></div></div>
-  <div class="controls">
-    <button type="button" id="startBtn">{{ t('js.btn_start') }}</button>
-    <button type="button" id="pauseBtn" class="secondary" hidden>{{ t('js.btn_pause') }}</button>
-    <button type="button" id="stopBtn" class="danger" hidden>{{ t('js.btn_stop') }}</button>
-  </div>
-  <p class="done-msg" id="doneMsg" aria-live="polite"></p>
-  {% if current_user.is_authenticated %}
-  <div class="afterglow" id="afterglow" aria-live="polite"></div>
-  {% endif %}
-</section>
+<p>{{ t('home.instruction') }}</p>
 
-<form id="settingsForm" class="card" method="POST" action="{{ url_for('save_settings') }}" novalidate>
-  <fieldset id="settingsFieldset">
-    <div class="presets" role="radiogroup" aria-label="{{ t('home.patterns_label') }}">
-      <label class="chip"><input type="radio" name="pattern" value="relax">{{ t('home.preset_relax') }}</label>
-      <label class="chip"><input type="radio" name="pattern" value="478">{{ t('home.preset_478') }}</label>
-      <label class="chip"><input type="radio" name="pattern" value="box">{{ t('home.preset_box') }}</label>
-      <label class="chip"><input type="radio" name="pattern" value="coherent">{{ t('home.preset_coherent') }}</label>
-      <label class="chip"><input type="radio" name="pattern" value="custom">{{ t('home.preset_custom') }}</label>
-    </div>
-    <p class="preset-desc" id="presetDesc"></p>
-    <div class="fields">
-      {% for name in ['inhale', 'hold1', 'exhale', 'hold2'] %}
-      {% set lim = limits[name] %}
-      <label>{{ lim.label }}{{ t('field.seconds_suffix') }}
-        <span class="input-wrap">
-          <input id="{{ name }}" name="{{ name }}" type="number" inputmode="decimal"
-                 min="{{ lim.min }}" max="{{ lim.max }}" step="0.5"
-                 value="{{ lim.default }}" required>
-        </span>
-      </label>
-      {% endfor %}
-    </div>
-    <p class="form-error" id="formError" role="alert"></p>
-    <div class="options">
-      <label><input type="checkbox" id="soundOpt"> {{ t('home.sound') }}</label>
-      <label><input type="checkbox" id="vibrateOpt"> {{ t('home.vibrate') }}</label>
-    </div>
-    {% if current_user.is_authenticated %}
-    <div class="controls"><button type="submit" id="saveBtn" class="secondary">{{ t('home.save') }}</button></div>
-    {% endif %}
+<form id="settingsForm" method="POST" action="{{ url_for('save_settings') }}" novalidate>
+  <fieldset class="settings" id="settingsFieldset">
+    <select id="presetSelect" aria-label="{{ t('home.patterns_label') }}">
+      <option value="relax">{{ t('home.preset_relax') }}</option>
+      <option value="478">{{ t('home.preset_478') }}</option>
+      <option value="box">{{ t('home.preset_box') }}</option>
+      <option value="coherent">{{ t('home.preset_coherent') }}</option>
+      <option value="custom">{{ t('home.preset_custom') }}</option>
+    </select>
+    {% for name in ['inhale', 'hold1', 'exhale', 'hold2'] %}
+    {% set lim = limits[name] %}
+    <label>{{ t('home.short_' ~ name) }}
+      <input id="{{ name }}" name="{{ name }}" type="number" inputmode="decimal"
+             min="{{ lim.min }}" max="{{ lim.max }}" step="0.5" value="{{ '%g'|format(lim.default) }}" required>
+    </label>
+    {% endfor %}
   </fieldset>
-</form>
+  <p class="error-line" id="formError" role="alert"></p>
 
-<details class="breathing-info card">
+  <button type="button" id="startBtn">{{ t('home.start') }}</button>
+  {% if current_user.is_authenticated %}
+  <button type="submit" id="saveBtn">{{ t('home.save') }}</button>
+  {% endif %}
+  <button type="button" id="pauseBtn" hidden>{{ t('js.btn_pause') }}</button>
+  <button type="button" id="stopBtn" hidden>{{ t('home.stop') }}</button>
+</form>
+<p class="error-line" id="recordError" role="alert"></p>
+
+<div class="circle" id="circle"></div>
+
+<div id="guideText" aria-live="polite"></div>
+
+<div class="progressBar" title="{{ t('home.phase_progress') }}">
+  <div class="progressBarFill" id="progressFill"></div>
+</div>
+
+<details class="breathing-info">
   <summary>{{ t('info.summary') }}</summary>
   <div class="content">
     <h2>{{ t('info.title') }}</h2>
@@ -197,7 +189,11 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     </ul>
     <p>{{ t('info.effect_html') }}</p>
     <p>{{ t('info.closing_html') }}</p>
-    <p class="hint">{{ t('info.safety') }}</p>
+    <p class="muted">{{ t('info.safety') }}</p>
+    <p class="muted options">
+      <label><input type="checkbox" id="soundOpt"> {{ t('home.sound') }}</label>
+      <label><input type="checkbox" id="vibrateOpt"> {{ t('home.vibrate') }}</label>
+    </p>
   </div>
 </details>
 </main>
@@ -210,97 +206,44 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
   const LOGGED_IN = {{ current_user.is_authenticated|tojson }};
   const RECORD_URL = {{ url_for('record_session')|tojson }};
   const MSG = {{ js_messages|tojson }};
-  const WARM = {{ warm_messages|tojson }};   // logged-in strings only; null for guests
   // Fill "{name}" placeholders in a translated string.
   const fmtMsg = (tpl, vars) => tpl.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
   const FIELDS = ["inhale", "hold1", "exhale", "hold2"];
   const PRESETS = {
-    relax:    { inhale: 4, hold1: 2, exhale: 6, hold2: 2, desc: MSG.preset_relax },
-    "478":    { inhale: 4, hold1: 7, exhale: 8, hold2: 0, desc: MSG.preset_478 },
-    box:      { inhale: 4, hold1: 4, exhale: 4, hold2: 4, desc: MSG.preset_box },
-    coherent: { inhale: 5, hold1: 0, exhale: 5, hold2: 0, desc: MSG.preset_coherent },
-    custom:   { desc: MSG.preset_custom }
+    relax:    { inhale: 4, hold1: 2, exhale: 6, hold2: 2 },
+    "478":    { inhale: 4, hold1: 7, exhale: 8, hold2: 0 },
+    box:      { inhale: 4, hold1: 4, exhale: 4, hold2: 4 },
+    coherent: { inhale: 5, hold1: 0, exhale: 5, hold2: 0 }
   };
-  const SMALL = 0.65, BIG = 1.25;
+  // Circle scale: at rest, after the exhale, after the inhale (as on the original page).
+  const IDLE = 1, SMALL = 0.6, BIG = 1.3;
 
   const $ = (id) => document.getElementById(id);
-  const circle = $("circle"), guide = $("guideText");
-  const progressFill = $("progressFill");
-  const startBtn = $("startBtn"), pauseBtn = $("pauseBtn"), stopBtn = $("stopBtn");
-  const doneMsg = $("doneMsg"), formError = $("formError"), fieldset = $("settingsFieldset");
-  const presetRadios = Array.from(document.querySelectorAll('input[name="pattern"]'));
+  const circle = $("circle"), guide = $("guideText"), progressFill = $("progressFill");
+  const startBtn = $("startBtn"), saveBtn = $("saveBtn"), pauseBtn = $("pauseBtn"), stopBtn = $("stopBtn");
+  const formError = $("formError"), recordError = $("recordError"), fieldset = $("settingsFieldset");
+  const presetSelect = $("presetSelect");
   const soundOpt = $("soundOpt"), vibrateOpt = $("vibrateOpt");
-  const greetEl = $("greeting"), statsLine = $("statsLine"), afterglow = $("afterglow");
-
-  // ---------- warm welcome (logged in): greeting by the browser's local time ----------
-  if (WARM && greetEl) {
-    const h = new Date().getHours();
-    const tpl = h >= 5 && h < 12 ? WARM.greet_morning : h >= 12 && h < 18 ? WARM.greet_afternoon : WARM.greet_evening;
-    greetEl.textContent = fmtMsg(tpl, { name: greetEl.dataset.name });
-  }
-
-  function updateStatsLine(stats) {
-    if (!WARM || !statsLine || !(stats.sessions > 0)) return;
-    const tpl = stats.sessions === 1 ? WARM.stats_line_one : WARM.stats_line;
-    statsLine.textContent = fmtMsg(tpl, { sessions: stats.sessions, minutes: Number(stats.minutes) });
-    statsLine.hidden = false;
-  }
-
-  // A soft line after a recorded session; fades out after a while.
-  let glowTimer = null, glowClearTimer = null;
-  function clearAfterglow() {
-    if (!afterglow) return;
-    clearTimeout(glowTimer); clearTimeout(glowClearTimer);
-    afterglow.classList.remove("show");
-    afterglow.replaceChildren();
-  }
-  function showAfterglow(together) {
-    if (!WARM || !afterglow) return;
-    clearAfterglow();
-    const line = (text, cls) => {
-      const p = document.createElement("p");
-      if (cls) p.className = cls;
-      p.textContent = text;
-      afterglow.appendChild(p);
-    };
-    line(WARM.thanks);
-    const others = (Number(together) || 0) - 1;   // everyone else, not counting you
-    if (others >= 1) line(fmtMsg(others === 1 ? WARM.not_alone_one : WARM.not_alone, { n: others }), "quiet");
-    requestAnimationFrame(() => afterglow.classList.add("show"));
-    glowTimer = setTimeout(() => {
-      afterglow.classList.remove("show");
-      glowClearTimer = setTimeout(() => afterglow.replaceChildren(), 1600);
-    }, 8000);
-  }
 
   // ---------- settings & presets ----------
-  function setPattern(key) {
-    presetRadios.forEach((r) => { r.checked = r.value === key; });
-    $("presetDesc").textContent = PRESETS[key].desc;
-  }
-  function currentPattern() {
-    const r = presetRadios.find((x) => x.checked);
-    return r ? r.value : "custom";
-  }
+  // Choosing a preset fills the four inputs; editing an input selects the matching preset or "custom".
   function detectPattern() {
     for (const key of Object.keys(PRESETS)) {
-      const p = PRESETS[key];
-      if (key !== "custom" && FIELDS.every((f) => Number($(f).value) === p[f])) return key;
+      if (FIELDS.every((f) => Number($(f).value) === PRESETS[key][f])) return key;
     }
     return "custom";
   }
-  presetRadios.forEach((r) => r.addEventListener("change", () => {
-    const p = PRESETS[r.value];
-    if (r.value !== "custom") FIELDS.forEach((f) => { $(f).value = p[f]; });
-    setPattern(r.value);
+  presetSelect.addEventListener("change", () => {
+    const p = PRESETS[presetSelect.value];
+    if (p) FIELDS.forEach((f) => { $(f).value = p[f]; });
     clearErrors();
-  }));
-  FIELDS.forEach((f) => $(f).addEventListener("input", () => setPattern(detectPattern())));
+  });
+  FIELDS.forEach((f) => $(f).addEventListener("input", () => { presetSelect.value = detectPattern(); }));
 
   if (SAVED) {
     FIELDS.forEach((f) => { $(f).value = SAVED[f]; });
   }
-  setPattern(detectPattern());
+  presetSelect.value = detectPattern();
 
   function clearErrors() {
     formError.textContent = "";
@@ -326,8 +269,9 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     return values;
   }
 
+  // Only the save button submits (logged in); guests have nothing to save.
   $("settingsForm").addEventListener("submit", (e) => {
-    if (!readSettings()) e.preventDefault();
+    if (!LOGGED_IN || !readSettings()) e.preventDefault();
   });
 
   // ---------- sound / vibration (off by default, remembered locally) ----------
@@ -387,25 +331,26 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     ].filter((s) => s.time > 0);
   }
 
+  // Idle: start (+ save); practising: pause + stop in the same spot.
   function setButtons() {
-    startBtn.hidden = state !== "idle";
-    pauseBtn.hidden = stopBtn.hidden = state === "idle";
+    const idle = state === "idle";
+    startBtn.hidden = !idle;
+    if (saveBtn) saveBtn.hidden = !idle;
+    pauseBtn.hidden = stopBtn.hidden = idle;
     pauseBtn.textContent = state === "paused" ? MSG.btn_resume : MSG.btn_pause;
-    fieldset.disabled = state !== "idle";
+    fieldset.disabled = !idle;
   }
 
   function start() {
     const v = readSettings();
-    if (!v) { doneMsg.textContent = ""; return; }
+    if (!v) return;
     if (soundOpt.checked) ensureAudio();   // must be created inside a user gesture
-    const steps = buildSteps(v);
     // Loops until Stop; `cycles` counts fully completed inhale-hold-exhale-hold cycles.
     session = {
-      values: v, pattern: currentPattern(), steps: steps, cycles: 0, idx: 0,
+      values: v, pattern: presetSelect.value, steps: buildSteps(v), cycles: 0, idx: 0,
       phaseStart: performance.now(), pausedAt: 0
     };
-    doneMsg.textContent = ""; doneMsg.className = "done-msg";
-    clearAfterglow();
+    recordError.textContent = "";
     state = "running";
     setButtons();
     enterPhase();
@@ -442,7 +387,9 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     const t = advance(now, true);
     const s = session.steps[session.idx];
     const p = t / s.time;
-    setScale(s.from + (s.to - s.from) * ease(p));
+    // The very first inhale grows from the resting size.
+    const from = session.cycles === 0 && session.idx === 0 ? IDLE : s.from;
+    setScale(from + (s.to - from) * ease(p));
     progressFill.style.width = (p * 100).toFixed(1) + "%";
     rafId = requestAnimationFrame(tick);
   }
@@ -471,14 +418,10 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     session = null;
     state = "idle";
     setButtons();
-    setScale(0.75);
-    guide.textContent = MSG.phase_ready;
+    setScale(IDLE);
+    guide.textContent = "";
     progressFill.style.width = "0%";
-    doneMsg.className = "done-msg";
-    if (s.cycles < 1) { doneMsg.textContent = ""; return; }   // not even one full breath
-    doneMsg.textContent = MSG.done;
-    if (!LOGGED_IN) { doneMsg.textContent += MSG.done_login_hint; return; }
-    record(s);
+    if (LOGGED_IN && s.cycles >= 1) record(s);   // nothing recorded without a full breath
   }
 
   function localDate() {
@@ -486,10 +429,12 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
 
+  // Recorded silently; only a failure shows a small error line.
   function record(s) {
     // rounds = completed cycles; the server derives the duration from it.
     const body = Object.assign({}, s.values,
       { rounds: s.cycles, pattern: s.pattern, local_date: localDate() });
+    const fail = (error) => { recordError.textContent = fmtMsg(MSG.record_failed, { error: error }); };
     fetch(RECORD_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -497,19 +442,9 @@ label.chip:has(input:checked) { background: #22c55e; color: #052e16; border-colo
       body: JSON.stringify(body)
     }).then((r) => r.json().then((data) => ({ ok: r.ok, data: data })))
       .then((res) => {
-        if (res.ok && res.data.ok) {
-          doneMsg.textContent += MSG.recorded;
-          updateStatsLine(res.data.stats);
-          showAfterglow(res.data.together);
-        } else {
-          doneMsg.className = "done-msg error";
-          doneMsg.textContent += fmtMsg(MSG.record_failed, { error: res.data.error || MSG.unknown_error });
-        }
+        if (!(res.ok && res.data.ok)) fail(res.data.error || MSG.unknown_error);
       })
-      .catch(() => {
-        doneMsg.className = "done-msg error";
-        doneMsg.textContent += fmtMsg(MSG.record_failed, { error: MSG.network_error });
-      });
+      .catch(() => fail(MSG.network_error));
   }
 
   startBtn.addEventListener("click", start);

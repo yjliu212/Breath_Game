@@ -198,9 +198,7 @@ def compute_stats(user_id, today=None):
     }
 
 
-# The "breathing together" line is only shown when at least this many distinct
-# people practised in the window, so a lone user never sees "1 people".
-TOGETHER_MIN = 2
+# Window for the anonymous "breathing together" count returned by /api/sessions.
 TOGETHER_WINDOW = timedelta(hours=24)
 
 
@@ -219,18 +217,6 @@ def count_recent_breathers(now=None):
                      PracticeSession.completed_at <= now)
              .scalar())
     return int(count or 0)
-
-
-def calm_key(today=None):
-    """i18n key of the calm line for a (server UTC) date; stable for the whole day."""
-    if today is None:
-        today = datetime.now(timezone.utc).date()
-    return i18n.CALM_KEYS[today.toordinal() % len(i18n.CALM_KEYS)]
-
-
-def format_minutes(minutes):
-    """12.0 -> '12', 0.6 -> '0.6' (matches how the browser prints the JSON number)."""
-    return ('%.1f' % minutes).rstrip('0').rstrip('.')
 
 
 # ---------------------------------------------------------------------------
@@ -360,23 +346,12 @@ def register_routes(app):
     @app.route("/")
     def home():
         settings = None
-        stats = None
-        warm = None
         if current_user.is_authenticated:
             settings = {name: safe_setting(name, getattr(current_user, name)) for name in SETTING_FIELDS}
-            stats = compute_stats(current_user.id)
-            together = count_recent_breathers()
-            warm = {
-                'calm_key': calm_key(),
-                'minutes': format_minutes(stats['minutes']),
-                'stats_key': 'warm.stats_line_one' if stats['sessions'] == 1 else 'warm.stats_line',
-                'together': together if together >= TOGETHER_MIN else None,
-            }
         limits = {name: {'label': t(f[0]), 'min': f[1], 'max': f[2], 'default': f[3]}
                   for name, f in SETTING_FIELDS.items()}
-        return render_template("Breath_Game.html", settings=settings, stats=stats, limits=limits,
-                               warm=warm, js_messages=i18n.js_messages(),
-                               warm_messages=i18n.warm_messages() if warm else None)
+        return render_template("Breath_Game.html", settings=settings, limits=limits,
+                               js_messages=i18n.js_messages())
 
     @app.route('/login', methods=['GET', 'POST'])
     def login():

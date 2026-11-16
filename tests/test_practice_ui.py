@@ -49,19 +49,21 @@ def test_no_status_line_or_total_progress(home_html):
 def test_practice_controls_and_options_kept(home_html):
     for html in home_html.values():
         for el in ('id="circle"', 'id="guideText"', 'id="startBtn"',
-                   'id="pauseBtn"', 'id="stopBtn"', 'id="doneMsg"', 'id="soundOpt"',
-                   'id="vibrateOpt"', 'name="pattern" value="478"', 'class="lang-switch"'):
+                   'id="pauseBtn" hidden', 'id="stopBtn" hidden', 'id="soundOpt"',
+                   'id="vibrateOpt"', 'id="presetSelect"', 'class="lang-switch"'):
             assert el in html, el
-    assert '>准备<' in home_html['zh'] and '>Ready<' in home_html['en']
+        # The phase text is empty when idle.
+        assert '<div id="guideText" aria-live="polite"></div>' in html
+    assert '>开始训练</button>' in home_html['zh'] and '>停止</button>' in home_html['zh']
+    assert '>Start</button>' in home_html['en'] and '>Stop</button>' in home_html['en']
 
 
-def test_no_countdown_inside_circle(home_html):
+def test_no_countdown_or_text_inside_circle(home_html):
     for html in home_html.values():
-        assert 'id="countText"' not in html
-        assert 'class="count"' not in html
-        assert 'countText' not in html
-        # Phase label stays, centered in the circle.
-        assert 'id="guideText"' in html and 'class="phase"' in html
+        assert 'countText' not in html and 'class="count"' not in html
+        # A plain circle; the phase text sits below it.
+        assert '<div class="circle" id="circle"></div>\n\n<div id="guideText"' in html
+        assert 'class="phase"' not in html
 
 
 def test_engine_loops_and_records_completed_cycles_on_stop(home_html):
@@ -69,9 +71,21 @@ def test_engine_loops_and_records_completed_cycles_on_stop(home_html):
     assert 'finish()' not in html and 'function finish' not in html
     assert 'session.cycles += 1' in html
     assert 'rounds: s.cycles' in html                 # completed cycles are sent as rounds
-    assert 'if (s.cycles < 1)' in html                 # nothing recorded without a full breath
+    assert 'if (LOGGED_IN && s.cycles >= 1) record(s);' in html   # nothing recorded without a full breath
     assert 'const FIELDS = ["inhale", "hold1", "exhale", "hold2"];' in html
     assert '"rounds"' not in html
+
+
+def test_pause_and_stop_take_the_start_and_save_spot(home_html):
+    for html in home_html.values():
+        form = html[html.index('<form id="settingsForm"'):html.index('</form>')]
+        for btn in ('id="startBtn"', 'id="pauseBtn"', 'id="stopBtn"'):
+            assert btn in form
+        script = html[html.index('<script>'):]
+        assert 'startBtn.hidden = !idle;' in script and 'if (saveBtn) saveBtn.hidden = !idle;' in script
+        assert 'pauseBtn.hidden = stopBtn.hidden = idle;' in script
+        # Same plain green style for every button: no secondary/danger variants.
+        assert 'class="secondary"' not in html and 'class="danger"' not in html
 
 
 def test_removed_js_messages_are_gone(home_html):

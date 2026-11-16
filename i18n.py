@@ -53,7 +53,6 @@ MESSAGES = {
     'field.hold1': {'zh': '吸气后屏息', 'en': 'Hold after inhale'},
     'field.exhale': {'zh': '呼气', 'en': 'Exhale'},
     'field.hold2': {'zh': '呼气后屏息', 'en': 'Hold after exhale'},
-    'field.seconds_suffix': {'zh': '（秒）', 'en': ' (sec)'},
 
     # ------------------------------------------------------------ server-side validation
     'err.setting_empty': {'zh': '{label}时间不能为空。', 'en': '{label} is required.'},
@@ -98,35 +97,15 @@ MESSAGES = {
                        'en': '← Back to home (you can practice without an account)'},
 
     # ------------------------------------------------------------ home / game page
-    'home.login_hint': {'zh': '（登录后可保存设置、记录练习）',
-                        'en': '(log in to save settings and track your practice)'},
-
-    # ------------------------------------------------------------ logged-in welcome (warm.*)
-    # Shown to logged-in users only. Keys listed in WARM_JS_KEYS are also sent to
-    # the browser, but only on logged-in pages (see ``warm_messages``).
-    'warm.greet_default': {'zh': '你好，{name}', 'en': 'Hello, {name}'},
-    'warm.greet_morning': {'zh': '早上好，{name}', 'en': 'Good morning, {name}'},
-    'warm.greet_afternoon': {'zh': '下午好，{name}', 'en': 'Good afternoon, {name}'},
-    'warm.greet_evening': {'zh': '晚上好，{name}', 'en': 'Good evening, {name}'},
-    'warm.calm_1': {'zh': '慢一点也没关系。', 'en': "There's no rush here."},
-    'warm.calm_2': {'zh': '今天也给自己留一点安静。', 'en': 'Leave a little quiet for yourself today.'},
-    'warm.calm_3': {'zh': '让呼吸带你回到此刻。', 'en': 'Let your breath bring you back to this moment.'},
-    'warm.calm_4': {'zh': '不必做得完美，在这里就好。', 'en': "You don't have to do it perfectly. Being here is enough."},
-    'warm.calm_5': {'zh': '放松肩膀，呼气可以再长一点。', 'en': 'Soften your shoulders, and let the exhale be a little longer.'},
-    'warm.calm_6': {'zh': '这几分钟，只属于你自己。', 'en': 'These few minutes are yours alone.'},
-    'warm.calm_7': {'zh': '累了就歇一歇，这里一直都在。', 'en': "Rest when you're tired. This place will still be here."},
-    'warm.stats_line': {'zh': '你已经在这里静下来 {sessions} 次，共 {minutes} 分钟。',
-                        'en': "You've paused here {sessions} times, {minutes} minutes in all."},
-    'warm.stats_line_one': {'zh': '你已经在这里静下来 {sessions} 次，共 {minutes} 分钟。',
-                            'en': "You've paused here {sessions} time, {minutes} minutes in all."},
-    'warm.together': {'zh': '今天有 {n} 位朋友在这里一起呼吸', 'en': '{n} people breathed here today'},
-    'warm.thanks': {'zh': '谢谢你给自己这一刻。', 'en': 'Thank you for taking this moment.'},
-    'warm.not_alone': {'zh': '此刻你并不孤单，今天有 {n} 位朋友也在这里。',
-                       'en': "You're not alone. {n} others breathed here today too."},
-    'warm.not_alone_one': {'zh': '此刻你并不孤单，今天有 {n} 位朋友也在这里。',
-                           'en': "You're not alone. {n} other person breathed here today too."},
-
-    'home.practice_label': {'zh': '练习', 'en': 'Practice'},
+    # The plain welcome line of the original page; the logout link follows it.
+    'home.welcome': {'zh': 'Welcome, {name}!', 'en': 'Welcome, {name}!'},
+    'home.instruction': {'zh': '输入你的 4-2-6-2（吸气-憋气-呼气-憋气）时间，开始训练：',
+                         'en': 'Enter your 4-2-6-2 (inhale-hold-exhale-hold) times in seconds, then start:'},
+    # Short input labels of the original page (the long field.* names are used in error messages).
+    'home.short_inhale': {'zh': '吸气', 'en': 'Inhale'},
+    'home.short_hold1': {'zh': '憋气1', 'en': 'Hold 1'},
+    'home.short_exhale': {'zh': '呼气', 'en': 'Exhale'},
+    'home.short_hold2': {'zh': '憋气2', 'en': 'Hold 2'},
     'home.phase_progress': {'zh': '当前阶段进度', 'en': 'Current phase progress'},
     'home.patterns_label': {'zh': '呼吸模式', 'en': 'Breathing pattern'},
     'home.preset_relax': {'zh': '放松 4-2-6-2', 'en': 'Relax 4-2-6-2'},
@@ -134,8 +113,10 @@ MESSAGES = {
     'home.preset_box': {'zh': '方块 4-4-4-4', 'en': 'Box 4-4-4-4'},
     'home.preset_coherent': {'zh': '平衡 5-5', 'en': 'Coherent 5-5'},
     'home.preset_custom': {'zh': '自定义', 'en': 'Custom'},
-    'home.sound': {'zh': '🔔 声音提示', 'en': '🔔 Sound cues'},
-    'home.vibrate': {'zh': '📳 振动提示', 'en': '📳 Vibration cues'},
+    'home.sound': {'zh': '声音提示', 'en': 'Sound cues'},
+    'home.vibrate': {'zh': '振动提示', 'en': 'Vibration cues'},
+    'home.start': {'zh': '开始训练', 'en': 'Start'},
+    'home.stop': {'zh': '停止', 'en': 'Stop'},
     'home.save': {'zh': '保存设置', 'en': 'Save settings'},
     'info.summary': {'zh': '🌿 点击展开 / 隐藏呼吸训练原理',
                      'en': '🌿 Show / hide how breathing practice works'},
@@ -167,33 +148,17 @@ MESSAGES = {
 
     # ------------------------------------------------------------ strings built by JavaScript
     'js.phase_inhale': {'zh': '吸气', 'en': 'Inhale'},
-    'js.phase_hold': {'zh': '屏息', 'en': 'Hold'},
+    'js.phase_hold': {'zh': '憋气', 'en': 'Hold'},
     'js.phase_exhale': {'zh': '呼气', 'en': 'Exhale'},
-    'js.phase_ready': {'zh': '准备', 'en': 'Ready'},
     'js.phase_paused': {'zh': '已暂停', 'en': 'Paused'},
-    'js.btn_start': {'zh': '▶ 开始', 'en': '▶ Start'},
-    'js.btn_pause': {'zh': '⏸ 暂停', 'en': '⏸ Pause'},
-    'js.btn_resume': {'zh': '▶ 继续', 'en': '▶ Resume'},
-    'js.btn_stop': {'zh': '■ 停止', 'en': '■ Stop'},
-    'js.preset_relax': {'zh': '延长呼气，适合日常放松减压。',
-                        'en': 'A longer exhale for everyday relaxation and stress relief.'},
-    'js.preset_478': {'zh': '吸 4 秒、屏 7 秒、呼 8 秒，常用于睡前助眠。',
-                      'en': 'Inhale for 4 s, hold for 7 s, exhale for 8 s — often used to fall asleep.'},
-    'js.preset_box': {'zh': '四段等长，帮助集中注意力、稳定情绪。',
-                      'en': 'Four equal phases to help you focus and steady your mood.'},
-    'js.preset_coherent': {'zh': '每分钟约 6 次的平稳呼吸，平衡身心。',
-                           'en': 'Smooth breathing at about 6 breaths per minute to balance body and mind.'},
-    'js.preset_custom': {'zh': '自由设置每个阶段的时长。', 'en': 'Set the length of each phase yourself.'},
+    'js.btn_pause': {'zh': '暂停', 'en': 'Pause'},
+    'js.btn_resume': {'zh': '继续', 'en': 'Resume'},
     'js.err_empty': {'zh': '{label}不能为空', 'en': '{label} is required'},
     'js.err_nan': {'zh': '{label}必须是数字', 'en': '{label} must be a number'},
     'js.err_negative': {'zh': '{label}不能为负数', 'en': '{label} cannot be negative'},
     'js.err_range': {'zh': '{label}需在 {min}–{max} 之间', 'en': '{label} must be between {min} and {max}'},
     'js.err_sep': {'zh': '；', 'en': '; '},
-    'js.done': {'zh': '本次练习已结束。', 'en': 'Session ended.'},
-    'js.done_login_hint': {'zh': ' 登录后可记录练习并查看统计。',
-                           'en': ' Log in to record your sessions and see your stats.'},
-    'js.recorded': {'zh': ' 已记录 ✔', 'en': ' Saved ✔'},
-    'js.record_failed': {'zh': ' 记录失败：{error}', 'en': ' Could not save: {error}'},
+    'js.record_failed': {'zh': '练习记录失败：{error}', 'en': 'Could not record this session: {error}'},
     'js.unknown_error': {'zh': '未知错误', 'en': 'unknown error'},
     'js.network_error': {'zh': '网络错误，请稍后重试。', 'en': 'network error, please try again later.'},
 }
@@ -237,17 +202,6 @@ def js_messages(lang=None):
     """All ``js.*`` strings for one language, keyed without the prefix."""
     return {key[3:]: t(key, lang) for key in MESSAGES if key.startswith('js.')}
 
-
-# warm.* strings the logged-in page needs in JavaScript (greeting by local time,
-# the stats sentence and the post-practice thank-you).
-WARM_JS_KEYS = ('greet_morning', 'greet_afternoon', 'greet_evening', 'stats_line', 'stats_line_one',
-                'thanks', 'not_alone', 'not_alone_one')
-CALM_KEYS = tuple(f'warm.calm_{i}' for i in range(1, 8))
-
-
-def warm_messages(lang=None):
-    """The ``warm.*`` strings used by JavaScript, keyed without the prefix."""
-    return {key: t('warm.' + key, lang) for key in WARM_JS_KEYS}
 
 
 class LazyText:

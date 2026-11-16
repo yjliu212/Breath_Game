@@ -72,7 +72,7 @@ def test_default_home_is_chinese(client):
     html = client.get('/').get_data(as_text=True)
     assert html_lang(html) == 'zh-CN'
     assert '<title>呼吸训练小游戏</title>' in html
-    assert '▶ 开始' in html and '>准备<' in html
+    assert '>开始训练</button>' in html and '<div id="guideText" aria-live="polite"></div>' in html
     assert 'og:locale" content="zh_CN"' in html
     assert embedded_json(html, 'MSG')['phase_inhale'] == '吸气'
 
@@ -85,12 +85,12 @@ def test_english_home_has_no_leftover_chinese(client):
     assert 'og:site_name" content="Breath Game"' in html
     assert 'og:title" content="Breath Game"' in html
     assert 'Breathing Practice' not in html                      # old brand name fully gone
-    assert '▶ Start' in html and 'Relax 4-2-6-2' in html and 'Hold after inhale (sec)' in html
+    assert '>Start</button>' in html and 'Relax 4-2-6-2' in html and '<label>Hold 1' in html
     assert 'og:locale" content="en_US"' in html
     assert 'How breathing practice works' in html
     assert '<strong>Why hold your breath?</strong>' in html      # _html keys keep their markup
     msg = embedded_json(html, 'MSG')
-    assert msg['phase_inhale'] == 'Inhale' and msg['btn_resume'] == '▶ Resume'
+    assert msg['phase_inhale'] == 'Inhale' and msg['btn_resume'] == 'Resume'
     limits = embedded_json(html, 'LIMITS')
     assert limits['hold2']['label'] == 'Hold after exhale' and 'rounds' not in limits
     leftover = CJK.findall(strip_allowed(html))
@@ -100,10 +100,9 @@ def test_english_home_has_no_leftover_chinese(client):
 def test_english_logged_in_home_has_no_leftover_chinese(client):
     register(client, headers=EN)
     html = client.get('/', headers=EN).get_data(as_text=True)
-    assert 'Hello, alice' in html and 'Log out' in html
+    assert 'Welcome, alice! <a href="/logout">Log out</a>' in html
     assert 'Registration successful — welcome!' in html
-    assert 'id="calmLine"' in html and 'Good evening, {name}' in html   # warm strings are English too
-    assert 'Save settings' in html
+    assert 'Save settings' in html and '>Stop</button>' in html
     leftover = CJK.findall(strip_allowed(html))
     assert not leftover, ''.join(leftover)
 
@@ -178,7 +177,7 @@ def test_switch_control_on_every_page(client, path, headers, current):
 def test_switch_control_keeps_logged_in_session(client):
     register(client)
     client.get('/lang/en?next=/')
-    assert 'Hello, alice' in client.get('/').get_data(as_text=True)
+    assert 'Welcome, alice!' in client.get('/').get_data(as_text=True)
 
 
 # ---------------------------------------------------------------- auth pages
