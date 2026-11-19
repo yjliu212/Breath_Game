@@ -65,6 +65,12 @@ button {
   margin-top: 10px;
 }
 button[hidden] { display: none; }
+/* Start and Stop share one grid cell, so both are as wide as the longer label
+   (in zh and en) and keep the plain button style above. The hidden one still
+   reserves its space but is invisible and not focusable. */
+.run-slot { display: inline-grid; }
+.run-slot > button { grid-area: 1 / 1; }
+.run-slot > button[hidden] { display: block; visibility: hidden; }
 
 button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible {
   outline: 3px solid #86efac;
@@ -143,6 +149,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 
 <form id="settingsForm" method="POST" action="{{ url_for('save_settings') }}" novalidate>
   <fieldset class="settings" id="settingsFieldset">
+    {% if current_user.is_authenticated %}
     <select id="presetSelect" aria-label="{{ t('home.patterns_label') }}">
       <option value="relax">{{ t('home.preset_relax') }}</option>
       <option value="478">{{ t('home.preset_478') }}</option>
@@ -150,6 +157,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
       <option value="coherent">{{ t('home.preset_coherent') }}</option>
       <option value="custom">{{ t('home.preset_custom') }}</option>
     </select>
+    {% endif %}
     {% for name in ['inhale', 'hold1', 'exhale', 'hold2'] %}
     {% set lim = limits[name] %}
     <label>{{ t('home.short_' ~ name) }}
@@ -160,11 +168,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   </fieldset>
   <p class="error-line" id="formError" role="alert"></p>
 
-  <button type="button" id="startBtn">{{ t('home.start') }}</button>
+  <span class="run-slot">
+    <button type="button" id="startBtn">{{ t('home.start') }}</button>
+    <button type="button" id="stopBtn" hidden>{{ t('home.stop') }}</button>
+  </span>
   {% if current_user.is_authenticated %}
   <button type="submit" id="saveBtn">{{ t('home.save') }}</button>
   {% endif %}
-  <button type="button" id="stopBtn" hidden>{{ t('home.stop') }}</button>
 </form>
 <p class="error-line" id="recordError" role="alert"></p>
 
@@ -221,7 +231,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   const circle = $("circle"), guide = $("guideText"), progressFill = $("progressFill");
   const startBtn = $("startBtn"), saveBtn = $("saveBtn"), stopBtn = $("stopBtn");
   const formError = $("formError"), recordError = $("recordError"), fieldset = $("settingsFieldset");
-  const presetSelect = $("presetSelect");
+  const presetSelect = $("presetSelect");   // only rendered for logged-in users (null for guests)
   const soundOpt = $("soundOpt"), vibrateOpt = $("vibrateOpt");
 
   // ---------- settings & presets ----------
@@ -232,17 +242,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
     }
     return "custom";
   }
-  presetSelect.addEventListener("change", () => {
-    const p = PRESETS[presetSelect.value];
-    if (p) FIELDS.forEach((f) => { $(f).value = p[f]; });
-    clearErrors();
-  });
-  FIELDS.forEach((f) => $(f).addEventListener("input", () => { presetSelect.value = detectPattern(); }));
+  if (presetSelect) {
+    presetSelect.addEventListener("change", () => {
+      const p = PRESETS[presetSelect.value];
+      if (p) FIELDS.forEach((f) => { $(f).value = p[f]; });
+      clearErrors();
+    });
+    FIELDS.forEach((f) => $(f).addEventListener("input", () => { presetSelect.value = detectPattern(); }));
+  }
 
   if (SAVED) {
     FIELDS.forEach((f) => { $(f).value = SAVED[f]; });
   }
-  presetSelect.value = detectPattern();
+  if (presetSelect) presetSelect.value = detectPattern();
 
   function clearErrors() {
     formError.textContent = "";
@@ -345,7 +357,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
     if (soundOpt.checked) ensureAudio();   // must be created inside a user gesture
     // Loops until Stop; `cycles` counts fully completed inhale-hold-exhale-hold cycles.
     session = {
-      values: v, pattern: presetSelect.value, steps: buildSteps(v), cycles: 0, idx: 0,
+      values: v, pattern: presetSelect ? presetSelect.value : detectPattern(), steps: buildSteps(v), cycles: 0, idx: 0,
       phaseStart: performance.now()
     };
     recordError.textContent = "";

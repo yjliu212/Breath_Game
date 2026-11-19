@@ -50,12 +50,12 @@ def test_practice_controls_and_options_kept(home_html):
     for html in home_html.values():
         for el in ('id="circle"', 'id="guideText"', 'id="startBtn"',
                    'id="stopBtn" hidden', 'id="soundOpt"',
-                   'id="vibrateOpt"', 'id="presetSelect"', 'class="lang-switch"'):
+                   'id="vibrateOpt"', 'class="lang-switch"'):
             assert el in html, el
         # The phase text is empty when idle.
         assert '<div id="guideText" aria-live="polite"></div>' in html
-    assert '>开始训练</button>' in home_html['zh'] and '>停止</button>' in home_html['zh']
-    assert '>Start</button>' in home_html['en'] and '>Stop</button>' in home_html['en']
+    assert '>开始训练</button>' in home_html['zh'] and '>停止训练</button>' in home_html['zh']
+    assert '>Start Training</button>' in home_html['en'] and '>Stop Training</button>' in home_html['en']
 
 
 def test_no_countdown_or_text_inside_circle(home_html):
@@ -88,8 +88,45 @@ def test_only_stop_takes_the_start_and_save_spot(home_html):
         assert 'stopBtn.addEventListener("click", stop);' in script
         # Same plain green style for every button: no secondary/danger variants.
         assert 'class="secondary"' not in html and 'class="danger"' not in html
-    assert '<button type="button" id="stopBtn" hidden>停止</button>' in home_html['zh']
-    assert '<button type="button" id="stopBtn" hidden>Stop</button>' in home_html['en']
+    assert '<button type="button" id="stopBtn" hidden>停止训练</button>' in home_html['zh']
+    assert '<button type="button" id="stopBtn" hidden>Stop Training</button>' in home_html['en']
+
+
+@pytest.mark.parametrize('lang,start,stop', [('zh', '开始训练', '停止训练'),
+                                             ('en', 'Start Training', 'Stop Training')])
+def test_start_and_stop_labels(home_html, lang, start, stop):
+    html = home_html[lang]
+    assert i18n.t('home.start', lang) == start and i18n.t('home.stop', lang) == stop
+    assert f'<button type="button" id="startBtn">{start}</button>' in html
+    assert f'<button type="button" id="stopBtn" hidden>{stop}</button>' in html
+    if lang == 'en':
+        assert '>Start</button>' not in html and '>Stop</button>' not in html
+    else:
+        assert '>停止</button>' not in html
+
+
+def test_start_and_stop_share_one_cell_with_the_plain_button_style(home_html):
+    for html in home_html.values():
+        start = html.index('<style>\nbody {')
+        css = html[start:html.index('</style>', start)]
+        # The one button rule (also used by Save) gives the original look.
+        m = re.search(r'\nbutton \{([^}]*)\}', css)
+        assert m, 'base button rule missing'
+        for decl in ('padding: 10px 16px;', 'font-size: 16px;', 'border-radius: 8px;'):
+            assert decl in m.group(1), decl
+        # No rule sizes Start/Stop on their own: no forced width, padding or font.
+        assert '#startBtn' not in css and '#stopBtn' not in css
+        assert 'min-width: 10em' not in css and 'line-height: 1.25' not in css
+        # Both sit in the same grid cell, so each is as wide as the longer label; the
+        # hidden one keeps its space but is invisible.
+        assert '\n.run-slot { display: inline-grid; }' in css
+        assert '\n.run-slot > button { grid-area: 1 / 1; }' in css
+        assert '\n.run-slot > button[hidden] { display: block; visibility: hidden; }' in css
+        slot = re.search(r'<span class="run-slot">\s*(.*?)\s*</span>', html, re.S)
+        assert slot, 'run-slot wrapper missing'
+        buttons = re.findall(r'<button[^>]*>', slot.group(1))
+        assert buttons == ['<button type="button" id="startBtn">',
+                           '<button type="button" id="stopBtn" hidden>']
 
 
 def test_no_pause_or_resume_remains(home_html):

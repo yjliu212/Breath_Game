@@ -85,7 +85,8 @@ def test_english_home_has_no_leftover_chinese(client):
     assert 'og:site_name" content="Breath Game"' in html
     assert 'og:title" content="Breath Game"' in html
     assert 'Breathing Practice' not in html                      # old brand name fully gone
-    assert '>Start</button>' in html and 'Relax 4-2-6-2' in html and '<label>Hold 1' in html
+    assert '>Start Training</button>' in html and '<label>Hold 1' in html
+    assert 'Relax 4-2-6-2' not in html                           # preset select is logged-in only
     assert 'og:locale" content="en_US"' in html
     assert 'How breathing practice works' in html
     assert '<strong>Why hold your breath?</strong>' in html      # _html keys keep their markup
@@ -102,7 +103,8 @@ def test_english_logged_in_home_has_no_leftover_chinese(client):
     html = client.get('/', headers=EN).get_data(as_text=True)
     assert 'Welcome, alice! <a href="/logout">Log out</a>' in html
     assert 'Registration successful — welcome!' in html
-    assert 'Save settings' in html and '>Stop</button>' in html
+    assert 'Save settings' in html and '>Stop Training</button>' in html
+    assert 'Relax 4-2-6-2' in html and 'id="presetSelect"' in html
     leftover = CJK.findall(strip_allowed(html))
     assert not leftover, ''.join(leftover)
 

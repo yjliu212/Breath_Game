@@ -81,7 +81,8 @@ def test_logged_out_default_values_have_no_trailing_zero(client, monkeypatch):
 
 
 @pytest.mark.parametrize('headers,col', [({}, 1), (EN, 2)])
-def test_preset_select_with_options(client, headers, col):
+def test_preset_select_with_options_when_logged_in(client, headers, col):
+    register(client)
     html = client.get('/', headers=headers).get_data(as_text=True)
     m = re.search(r'<select id="presetSelect" aria-label="([^"]+)">(.*?)</select>', html, re.S)
     assert m and m.group(1) == i18n.t('home.patterns_label', 'en' if headers else 'zh')
@@ -93,13 +94,39 @@ def test_preset_select_with_options(client, headers, col):
     assert 'name="pattern"' not in html and 'class="chip"' not in html and 'presetDesc' not in html
 
 
-def test_preset_script_fills_inputs_and_detects_custom(client):
+@pytest.mark.parametrize('headers', [{}, EN])
+def test_logged_out_page_has_no_preset_select(client, headers):
+    html = client.get('/', headers=headers).get_data(as_text=True)
+    lang = 'en' if headers else 'zh'
+    assert 'id="presetSelect"' not in html and '<select' not in body(html)
+    assert i18n.t('home.patterns_label', lang) not in body(html)
+    assert '<option value=' not in html
+    for _, zh, en in PRESET_OPTIONS:
+        assert (en if headers else zh) not in body(html)
+    # The four timing inputs are still there, inside the fieldset.
+    fieldset = html[html.index('<fieldset class="settings"'):html.index('</fieldset>')]
+    assert fieldset.count('type="number"') == 4
+
+
+@pytest.mark.parametrize('user', [False, True])
+def test_preset_script_guards_for_missing_select(client, user):
+    if user:
+        register(client)
     html = client.get('/').get_data(as_text=True)
     script = html[html.index('<script>'):]
     assert 'if (p) FIELDS.forEach((f) => { $(f).value = p[f]; });' in script
-    assert 'presetSelect.value = detectPattern();' in script
     assert 'return "custom";' in script
-    assert 'pattern: presetSelect.value' in script     # sent with the recorded session
+    # Every use of the select is behind a null check, so guests get no errors.
+    assert 'if (presetSelect) {\n    presetSelect.addEventListener("change"' in script
+    assert 'if (presetSelect) presetSelect.value = detectPattern();' in script
+    # Sent with the recorded session; falls back to the detected pattern.
+    assert 'pattern: presetSelect ? presetSelect.value : detectPattern()' in script
+    unguarded = [line for line in script.splitlines()
+                 if 'presetSelect' in line and 'if (presetSelect)' not in line
+                 and 'presetSelect ?' not in line and 'const presetSelect' not in line]
+    # Remaining references live inside the guarded block.
+    block = script[script.index('if (presetSelect) {'):script.index('\n  }\n', script.index('if (presetSelect) {'))]
+    assert all(line in block for line in unguarded), unguarded
 
 
 # ---------------------------------------------------------------- plain look, nothing else
@@ -109,9 +136,12 @@ def test_page_order_and_no_extra_emoji(client, user, headers):
     if user:
         register(client)
     html = client.get('/', headers=headers).get_data(as_text=True)
-    order = ['<h1>🌿 ', 'class="user-line"', 'home.instruction', 'id="presetSelect"', 'id="startBtn"',
-             'id="circle"', 'id="guideText"', 'class="progressBar"', '<details class="breathing-info">']
+    order = ['<h1>🌿 ', 'class="user-line"', 'home.instruction', 'id="presetSelect"', 'id="inhale"',
+             'id="startBtn"', 'id="circle"', 'id="guideText"', 'class="progressBar"',
+             '<details class="breathing-info">']
     order[2] = i18n.t('home.instruction', 'en' if headers else 'zh')
+    if not user:
+        order.remove('id="presetSelect"')
     positions = [html.index(x) for x in order]
     assert positions == sorted(positions)
     # Only the two leaves of the original page: the title and the principle summary.
