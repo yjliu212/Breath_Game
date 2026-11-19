@@ -86,6 +86,33 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   will-change: transform;
 }
 
+/* Optional orb styles (static/orb.js): click, tap, Enter or Space on the circle cycles
+   plain → taiji → mist → aura → particles → lotus. The circle keeps its size and scale;
+   other styles draw in a 240px layer centred on it, which never affects layout. The layer
+   is transparent, takes no clicks (they go to #circle) and is clipped to a circle of
+   radius 86px, the circle's own 80px plus ~6px (~8px at the 1.3 scale), so no glow, petal
+   or particle reaches the buttons or the phase text, and no box is ever painted.
+   The buttons and #guideText also stack above the circle. */
+.circle { position: relative; z-index: 0; cursor: pointer; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+.circle:focus { outline: none; }
+.circle:focus-visible { outline: 3px solid #86efac; outline-offset: 4px; }
+.circle.orb-alt { background: none; }
+.orb-layer { position: absolute; left: -40px; top: -40px; width: 240px; height: 240px; pointer-events: none;
+  background: transparent; clip-path: circle(86px at 50% 50%); }
+.orb-layer, .orb-layer * { pointer-events: none; }
+.orb-layer svg { overflow: hidden; background: transparent; }
+#settingsForm button, #guideText { position: relative; z-index: 1; }
+.orb-layer[hidden] { display: none; }
+.orb-layer > svg, .orb-layer > canvas { display: block; width: 100%; height: 100%; }
+.orb-mist-glow { position: absolute; inset: 0; border-radius: 50%; will-change: opacity;
+  background: radial-gradient(circle at 50% 50%, rgba(74,222,128,.32) 0, rgba(34,197,94,.2) 80px, rgba(34,197,94,0) 86px); }
+.orb-mist-ball { position: absolute; left: 40px; top: 40px; width: 160px; height: 160px;
+  border-radius: 50%; overflow: hidden; background: #0b1a2e; }
+.orb-mist-ball > canvas { display: block; width: 100%; height: 100%; }
+.orb-mist-ball::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+  box-shadow: inset 0 0 18px rgba(15,23,42,.85), inset 0 0 2px rgba(187,247,208,.35); }
+
 #guideText {
   font-size: 24px;
   margin-top: 10px;
@@ -178,7 +205,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 </form>
 <p class="error-line" id="recordError" role="alert"></p>
 
-<div class="circle" id="circle"></div>
+<div class="circle" id="circle" role="button" tabindex="0" aria-label="{{ t('home.orb_switch') }}" title="{{ t('home.orb_switch') }}"></div>
 
 <div id="guideText" aria-live="polite"></div>
 
@@ -207,6 +234,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 </details>
 </main>
 
+<script src="{{ url_for('static', filename='orb.js') }}"></script>
 <script>
 (function () {
   "use strict";
@@ -233,6 +261,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   const formError = $("formError"), recordError = $("recordError"), fieldset = $("settingsFieldset");
   const presetSelect = $("presetSelect");   // only rendered for logged-in users (null for guests)
   const soundOpt = $("soundOpt"), vibrateOpt = $("vibrateOpt");
+  // Optional orb styles from static/orb.js; they only read the breath state, never change it.
+  const orb = window.BreathOrb || { breath: function () {} };
 
   // ---------- settings & presets ----------
   // Choosing a preset fills the four inputs; editing an input selects the matching preset or "custom".
@@ -335,10 +365,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 
   function buildSteps(v) {
     return [
-      { label: MSG.phase_inhale, time: v.inhale, from: SMALL, to: BIG, freq: 523 },
-      { label: MSG.phase_hold, time: v.hold1, from: BIG, to: BIG, freq: 440 },
-      { label: MSG.phase_exhale, time: v.exhale, from: BIG, to: SMALL, freq: 392 },
-      { label: MSG.phase_hold, time: v.hold2, from: SMALL, to: SMALL, freq: 440 }
+      { key: "inhale", label: MSG.phase_inhale, time: v.inhale, from: SMALL, to: BIG, freq: 523 },
+      { key: "hold1", label: MSG.phase_hold, time: v.hold1, from: BIG, to: BIG, freq: 440 },
+      { key: "exhale", label: MSG.phase_exhale, time: v.exhale, from: BIG, to: SMALL, freq: 392 },
+      { key: "hold2", label: MSG.phase_hold, time: v.hold2, from: SMALL, to: SMALL, freq: 440 }
     ].filter((s) => s.time > 0);
   }
 
@@ -399,7 +429,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
     const p = t / s.time;
     // The very first inhale grows from the resting size.
     const from = session.cycles === 0 && session.idx === 0 ? IDLE : s.from;
-    setScale(from + (s.to - from) * ease(p));
+    const scale = from + (s.to - from) * ease(p);
+    setScale(scale);
+    orb.breath(s.key, p, scale);
     progressFill.style.width = (p * 100).toFixed(1) + "%";
     rafId = requestAnimationFrame(tick);
   }
@@ -414,6 +446,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
     state = "idle";
     setButtons();
     setScale(IDLE);
+    orb.breath("idle", 0, IDLE);
     guide.textContent = "";
     progressFill.style.width = "0%";
     if (LOGGED_IN && s.cycles >= 1) record(s);   // nothing recorded without a full breath

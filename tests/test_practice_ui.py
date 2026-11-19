@@ -62,7 +62,8 @@ def test_no_countdown_or_text_inside_circle(home_html):
     for html in home_html.values():
         assert 'countText' not in html and 'class="count"' not in html
         # A plain circle; the phase text sits below it.
-        assert '<div class="circle" id="circle"></div>\n\n<div id="guideText"' in html
+        # (It is also the orb-style switch, so it carries button semantics; see test_orb_styles.py.)
+        assert re.search(r'<div class="circle" id="circle"[^>]*></div>\n\n<div id="guideText"', html)
         assert 'class="phase"' not in html
 
 

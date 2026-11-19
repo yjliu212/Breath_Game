@@ -118,6 +118,7 @@ MESSAGES = {
     'home.start': {'zh': '开始训练', 'en': 'Start Training'},
     'home.stop': {'zh': '停止训练', 'en': 'Stop Training'},
     'home.save': {'zh': '保存设置', 'en': 'Save settings'},
+    'home.orb_switch': {'zh': '切换呼吸球样式', 'en': 'Change breathing orb style'},
     'info.summary': {'zh': '🌿 点击展开 / 隐藏呼吸训练原理',
                      'en': '🌿 Show / hide how breathing practice works'},
     'info.title': {'zh': '呼吸训练的原理', 'en': 'How breathing practice works'},
